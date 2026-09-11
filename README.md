@@ -1,16 +1,16 @@
 # 바다로 BadaRo 횟집 체인 배차 지원
 
-바다로는 횟집 체인 본부의 물류 담당자를 위한 배차 지원 서비스입니다. 자연어 요청에서 배송 조건을 추출하고, 주문과 차량 정보를 확인해 TMAP TMS에 배차를 요청하도록 개발하고 있습니다. 활어 운송 시간, 차량 적재량, 지점별 납품시간을 고려합니다.
+바다로는 횟집 체인 본부의 물류 담당자를 위한 배차 지원 서비스입니다. 자연어 요청에서 배송 조건을 추출하고, 주문과 차량 정보를 확인해 TMAP TMS에 배차를 요청합니다. 활어 운송 시간, 차량 적재량, 지점별 납품시간을 고려합니다.
 
 현재 Vue 화면은 센터·차량·주문 선택과 배차 결과를 왼쪽 패널에, 배송 위치·경로를 오른쪽 지도에 표시합니다. Python Agent는 요청 구조화·재질문·Tool 실행·결과 반환과 로컬 API를 제공합니다. 키 없는 합성 Mock 시연과 실제 외부 API 검증을 구분합니다.
 
 > SKALA 생성형 AI 서비스 개발(LangChain) 종합실습 · 5층 6반 3조
 
-## 배차 처리 계획
+## 배차 처리 흐름
 
 ```mermaid
 flowchart LR
-  U[사용자 입력] --> S[조건 구조화<br/>DispatchRequest]
+  U[사용자 입력] --> S[조건 추출 RequestDraft<br/>요청 검증 DispatchRequest]
   S --> C{필수값 충분?}
   C -- 아니오 --> Q[되묻기]
   C -- 예 --> T[주문·차량 조회]
@@ -65,7 +65,7 @@ Python 서버를 켠 상태에서 루트의 `npm run dev`로 화면을 실행하
 
 `offline`은 제한된 입력 예시를 처리하는 대체 모델이며 실제 LLM이 아닙니다. 합성 배차 응답에는 ETA·거리가 없고 이를 임의로 채우지 않습니다. 설정·OpenAI 모드·API 응답 형식은 [Agent 실행 안내](docs/agent-integration.md)를 참고하세요.
 
-의존성은 `agent/pyproject.toml`에서 관리합니다. `requirements.txt`는 개발 도구를 포함한 패키지 설치 진입점입니다. 모델명은 설계서의 미확정 항목이므로 `.env.example`에서 비워 두었습니다.
+의존성은 `agent/pyproject.toml`에서 관리합니다. `requirements.txt`는 개발 도구를 포함한 패키지 설치 진입점입니다. 실제 연결은 `gpt-5.4-mini`로 확인했습니다. `.env.example`의 `MAIN_MODEL`은 실행 계정에서 사용할 모델을 설정하도록 비워 두었습니다.
 
 키는 서버의 `agent/.env`에만 둡니다. TMS 배차 요청은 **하루 20건**이라 실호출은 담당자만 합니다.
 
@@ -77,7 +77,8 @@ agent/
     agent.py           # PM 통합 지점 (B-17)
     schemas/           # 요청·결과 스키마 (B-03, B-05)
     tools/             # 주문·차량 조회, 지오코딩, 배차 (B-08~10)
-    middleware/        # Context·State·Store, 실행 제어 (B-11~14)
+    middleware/        # 공통 Context·State, 실행 제어 (B-11~14)
+    runtime/           # 추출·Tool·미들웨어 등록·API 반환 계약
     guardrails/        # 입력·출력 검증 (B-14)
   prompts/             # System Prompt·Few-shot (B-06)
   data/                # 주문·차량 CSV와 목업 데이터 (B-04, B-10)
@@ -94,9 +95,9 @@ notebooks/             # 개인 실험, notebooks/본인이름/ 사용
 .github/               # CI·CODEOWNERS·PR 템플릿
 ```
 
-[설계서 v1.3](docs/6반_3조_설계서_v1.3.docx)는 B-03의 요청·결과 모델, Tool 공개 입력, 서버 내부 실행과 State 저장 기준을 반영한 개정본입니다. [v1.2](docs/6반_3조_설계서_v1.2.docx)의 미들웨어·가드레일 기준을 유지하며 이전 개정본과 초안도 보관합니다. 현재 MVP 범위는 [설계서 v2](docs/6반_3조_설계서_v2.docx)와 [Agent 실행 안내](docs/agent-integration.md)를 따릅니다. 실제 API 전체 시나리오 검증은 남아 있습니다. [설계서와 코드의 대응 및 미확정 사항](docs/README.md)을 함께 확인하세요.
+현재 MVP는 [설계서 v2](docs/6반_3조_설계서_v2.docx)와 [Agent 실행 안내](docs/agent-integration.md)를 따릅니다. 사용자 수정 원본과 이전 버전은 보관합니다. [설계·코드 대조 결과](docs/design-code-review.md)에 4.2 테스트 대응과 남은 검증을 정리했습니다. 실제 API 검증 범위는 상온 주문 1건이며 전체 40건 검증은 남아 있습니다.
 
-CI는 프론트 lint·단위 테스트·build와 에이전트 Ruff·문법·import 테스트를 실행합니다. Python 업무 시나리오가 추가되면 같은 pytest 작업에서 실행됩니다. 브라우저 검증은 [프론트 가이드](docs/frontend.md)의 별도 명령을 사용합니다.
+CI는 프론트 lint·단위 테스트·build, 에이전트 Ruff·문법·pytest, 설계 계약 대조와 CSV 검증을 실행합니다. 브라우저 검증은 [프론트 가이드](docs/frontend.md)의 별도 명령을 사용합니다.
 
 ## 팀
 

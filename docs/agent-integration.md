@@ -24,11 +24,11 @@ USE_MOCK=1 MODEL_MODE=offline python -m badaro.agent
 | openai     | 1        | 같은 OpenAI 모델로 조건 추출·Tool 선택, 배차는 합성 Mock   |
 | openai     | 0        | OpenAI와 실제 TMAP·TMS Tool 호출                           |
 
-OpenAI 모드는 서버에 `OPENAI_API_KEY`와 사용 가능한 `MAIN_MODEL`을 설정해야 한다. 모델명은 임의로 확정하지 않는다. `USE_MOCK`는 TMAP·TMS 전환이며 OpenAI 요금 발생 여부를 결정하지 않는다. `MODEL_MODE=offline`만 모든 외부 모델 호출을 생략한다.
+OpenAI 모드는 서버에 `OPENAI_API_KEY`와 사용 가능한 `MAIN_MODEL`을 설정해야 한다. 실제 연결은 `gpt-5.4-mini`로 확인했다. `USE_MOCK`는 TMAP·TMS 전환이며 OpenAI 요금 발생 여부를 결정하지 않는다. `MODEL_MODE=offline`만 모든 외부 모델 호출을 생략한다.
 
 주소 변환은 `TMAP_APP_KEY`, TMS 배차·센터 조회는 `TMS_APP_KEY`를 사용한다. TMS 키를 비워 두면 기존처럼 `TMAP_APP_KEY`를 사용한다. 키가 서로 다른 앱에 속하면 TMS 등록 데이터도 다르므로 배차에는 데이터를 등록한 앱의 키를 지정한다.
 
-실제 모드는 API 키가 필요하며, 담당자가 마스터 등록값과 현재 요청 데이터의 일치를 확인한 뒤 `TMS_MASTER_VERIFIED=1`로 실행한다. 기본값 0에서는 실제 배차를 중단한다. 이 설정은 검증을 자동 수행하지 않는다. 실제 호출과 한도 확인은 #19에서 진행한다.
+실제 모드는 API 키가 필요하며, 담당자가 마스터 등록값과 현재 요청 데이터의 일치를 확인한 뒤 `TMS_MASTER_VERIFIED=1`로 실행한다. 기본값 0에서는 실제 배차를 중단한다. 이 설정은 검증을 자동 수행하지 않는다. 확인한 실연동 내역은 아래에 기록하며 남은 통합 검증은 #20에서 추적한다.
 
 원본 CSV와 별도로 시연 일정을 준비할 때는 서버 환경변수 `BADARO_DATA_DIR`에 CSV 디렉터리의 절대 경로를 지정한다. 센터·지점·주문·차량 CSV가 필요하며, 배송일과 차량 근무일을 함께 맞춘다. 경로를 지정했는데 파일이 없으면 원본으로 대체하지 않고 오류를 반환한다. 비워 두면 기존 샘플을 사용한다.
 
@@ -39,7 +39,7 @@ OpenAI 모드는 서버에 `OPENAI_API_KEY`와 사용 가능한 `MAIN_MODEL`을 
 - 원본 `agent/data/`는 변경하지 않는다. 설치 패키지에는 동일한 CSV를 포함하고 사본 일치를 테스트한다.
 - `agent/badaro/runtime/demo.json`은 **합성 시연 응답**이다. CENTER-NR, 2026-09-11 06:00, S01·S02·S03 주문 6건, 기존 가용 차량 5대 요청에만 대응한다. 반환 경로는 4대에 배정된다.
 - 좌표는 기존 CSV에서 가져왔다. 실제 TMAP 응답이나 TMS 최적화 결과라고 표시하지 않는다. ETA·거리·소요시간은 제공하지 않으며 생성하지 않는다.
-- 다른 요청은 응답을 조작해 맞추지 않고 저장 응답 없음으로 중단한다. 실제 시연용 응답 확보와 대조는 #19에 남아 있다.
+- 다른 요청은 응답을 조작해 맞추지 않고 저장 응답 없음으로 중단한다. 실제 상온 1건 검증은 아래 실연동 기록을 따른다.
 - PR #40의 B-02 실응답 재생 어댑터는 그대로 유지한다. 이번 합성 시연 데이터와 출처가 다르다.
 
 ## 로컬 API와 Vue 연결 계약
@@ -48,7 +48,7 @@ OpenAI 모드는 서버에 `OPENAI_API_KEY`와 사용 가능한 `MAIN_MODEL`을 
 USE_MOCK=1 MODEL_MODE=offline python -m badaro.server --port 8000
 ```
 
-서버는 `127.0.0.1`에만 바인딩한다. 운영 인증 서버가 아니라 로컬 시연용이다. Vue 개발 서버의 `http://localhost:5173`과 `http://127.0.0.1:5173`만 CORS를 허용한다. Vue 개발 화면은 Vite 프록시(`/api/agent`)로 이 서버에 연결한다. 본사물류운영자 화면에서 메시지를 보내고 재질문과 차량별 결과를 확인한다. 기존 프론트 목업 선택값·지도는 Python 채팅과 별개다.
+서버는 `127.0.0.1`에만 바인딩한다. 운영 인증 서버가 아니라 로컬 시연용이다. Vue 개발 서버의 `http://localhost:5173`과 `http://127.0.0.1:5173`만 CORS를 허용한다. Vue 개발 화면은 Vite 프록시(`/api/agent`)로 이 서버에 연결한다. 본사물류운영자 화면에서 메시지를 보내고 재질문과 차량별 결과를 확인한다. 기존 프론트 목업 선택값은 채팅과 별개다. 지도는 Agent의 확정 좌표를 점선 연결하고 목업과 전환한다.
 
 `GET /health`는 상태와 실행 모드를 반환한다. `POST /api/chat`은 다음 JSON을 받는다. 클라이언트는 모델·키·역할·runtime_context·실행 모드를 지정할 수 없다.
 
@@ -62,7 +62,7 @@ USE_MOCK=1 MODEL_MODE=offline python -m badaro.server --port 8000
 { "message": "2026-09-11", "thread_id": "서버가 발급한 UUID" }
 ```
 
-응답 필드는 `thread_id`, `request_id`, `mode`, `status`, `message`, `questions`, `request`, `result`, `error`, `model_calls`다. Python 타입은 `AgentReply`다.
+응답 필드는 `thread_id`, `request_id`, `mode`, `status`, `message`, `questions`, `request`, `result`, `map_data`, `error`, `model_calls`다. Python 타입은 `AgentReply`다.
 
 - `needs_clarification`: questions를 보여주고 같은 thread_id로 답한다.
 - `completed`: result의 status·routes·unassigned_orders를 직접 표시한다. completed는 요청 처리 종료를 뜻하며, result.status가 partial 또는 failed일 수도 있다.
@@ -73,7 +73,7 @@ USE_MOCK=1 MODEL_MODE=offline python -m badaro.server --port 8000
 
 ## 검증과 구현 참고
 
-`cd agent && python -m pytest`로 기존 테스트와 M01~M08 통합 테스트, 실제 로컬 HTTP 테스트, 저장소 밖 wheel 설치 테스트를 실행한다. 테스트는 실제 LLM·TMS를 호출하지 않는다. 모델 호출 상한, 요청 분리, 모호한 주소 보완, 배차 중복 실행 방지와 금지 Tool 인자를 포함한다.
+`cd agent && python -m pytest`로 기존 테스트와 M01~M08 통합 테스트([v2 케이스 대응](design-code-review.md#42-테스트-대응)), 실제 로컬 HTTP 테스트, 저장소 밖 wheel 설치 테스트를 실행한다. 테스트는 실제 LLM·TMS를 호출하지 않는다. 모델 호출 상한, 요청 분리, 모호한 주소 보완, 배차 중복 실행 방지와 금지 Tool 인자를 포함한다.
 
 [LangChain ToolRuntime·Command](https://docs.langchain.com/oss/python/langchain/tools)로 서버 State를 주입한다. [미들웨어 종료 분기](https://docs.langchain.com/oss/python/langchain/middleware/custom)로 오류와 호출 상한에서 멈춘다. 조건 추출은 [OpenAI 구조화 출력의 strict 규칙](https://developers.openai.com/api/docs/guides/function-calling#strict-mode)을 사용하는 동일 모델에서 처리한다.
 
