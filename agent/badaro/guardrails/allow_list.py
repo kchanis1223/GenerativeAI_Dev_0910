@@ -3,7 +3,10 @@
 allow-list = '허용 목록'. 막을 것을 나열하는 deny-list 와 반대로,
 허용된 것만 통과시키고 나머지는 전부 막는 방식이다. 새로운 공격이 나와도 자동으로 막힌다.
 
-탐지 대상 (완료 기준): Tool 인자에 endpoint / header / appKey 변경 시도가 있으면 호출 차단.
+허용 인자는 badaro.tools 의 공개 Tool 시그니처(#29)와 일치시킨다.
+runtime_context 는 서버가 주입하는 내부 인자이므로 LLM 인자로 허용하지 않는다.
+
+탐지 대상: Tool 인자에 endpoint / header / appKey 변경 시도가 있으면 호출 차단.
 왜 위험한가: 모델이 인자로 endpoint 를 바꿔치기하면 우리 appKey 를 공격자 서버로 보내게 된다.
 """
 from __future__ import annotations
@@ -11,11 +14,14 @@ from __future__ import annotations
 from typing import Any
 
 ALLOWED_ARGS: dict[str, frozenset[str]] = {
-    "get_delivery_orders":    frozenset({"delivery_date", "store_codes", "storage_type"}),
-    "get_available_vehicles": frozenset({"depot_id", "vehicle_type", "delivery_date"}),
-    "geocode_address":        frozenset({"address"}),
-    "optimize_dispatch":      frozenset({"depot_id", "orders", "vehicles", "deadline", "options"}),
-    "confirm_dispatch":       frozenset({"dispatch_id", "decision", "reason"}),
+    "get_delivery_orders": frozenset({
+        "depot_id", "delivery_date", "destination_ids", "product_names",
+    }),
+    "get_available_vehicles": frozenset({
+        "depot_id", "delivery_date", "vehicle_count", "excluded_vehicle_ids",
+    }),
+    "geocode_address": frozenset({"address"}),
+    "optimize_dispatch": frozenset({"order_ids", "vehicle_ids", "constraints"}),
 }
 
 FORBIDDEN_ARGS: frozenset[str] = frozenset({
@@ -24,6 +30,7 @@ FORBIDDEN_ARGS: frozenset[str] = frozenset({
     "appkey", "app_key", "apikey", "api_key", "authorization",
     "token", "access_token", "secret", "password",
     "verify", "verify_ssl", "cert", "timeout_override",
+    "runtimecontext",
 })
 
 BLOCK_MESSAGE = (
