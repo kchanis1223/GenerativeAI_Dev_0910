@@ -9,7 +9,14 @@ from typing import Literal
 from dotenv import load_dotenv
 from pydantic import BaseModel, ConfigDict, Field
 
-from badaro.schemas import DispatchRequest, DispatchResult, Priority, StorageType, ToolError
+from badaro.schemas import (
+    DispatchRequest,
+    DispatchResult,
+    GeocodeCandidate,
+    Priority,
+    StorageType,
+    ToolError,
+)
 
 
 class AddressCorrection(BaseModel):
@@ -47,6 +54,11 @@ class RequestDraft(BaseModel):
         )
 
 
+class DispatchMap(BaseModel):
+    origin: GeocodeCandidate
+    stops: dict[str, GeocodeCandidate]
+
+
 class AgentReply(BaseModel):
     thread_id: str
     request_id: str
@@ -56,6 +68,7 @@ class AgentReply(BaseModel):
     questions: list[str] = Field(default_factory=list)
     request: DispatchRequest | None = None
     result: DispatchResult | None = None
+    map_data: DispatchMap | None = None
     error: ToolError | None = None
     model_calls: int = 0
 

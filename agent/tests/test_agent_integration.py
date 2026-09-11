@@ -44,6 +44,11 @@ def test_M01_csv_to_dispatch_and_no_duplicate_send():
     assert sum(len(r.stops) for r in reply.result.routes) == 6
     assert reply.model_calls == 4
     assert reply.mode == "offline"
+    assert reply.map_data.origin == agent.profile.origin
+    assert len(reply.map_data.stops) == 6
+    orders = backend.orders("CENTER-NR", NOW.date(), reply.request.destination_ids, None)
+    for order in orders:
+        assert reply.map_data.stops[order.order_id] == backend.geocode(order.address).candidates[0]
     assert backend.dispatch.call_count == 1
     assert agent.chat(TEXT, reply.thread_id) == reply
     assert backend.dispatch.call_count == 1
@@ -120,6 +125,7 @@ def test_M03_ambiguous_address_stops_then_resumes_with_confirmed_correction():
     first = agent.chat(TEXT)
     assert first.status == "needs_clarification", first
     assert first.error.code is ToolErrorCode.GEOCODE_AMBIGUOUS
+    assert first.map_data is None
     assert backend.dispatch.call_count == 0
     second = agent.chat(corrected, first.thread_id)
     assert second.status == "completed", second
@@ -150,6 +156,7 @@ def test_M05_timeout_is_not_resent_and_secrets_are_masked(caplog):
     reply = service(backend=backend).chat(TEXT)
     assert reply.status == "error"
     assert reply.error.code is ToolErrorCode.TIMEOUT
+    assert reply.map_data is None
     assert backend.dispatch.call_count == 1
     assert "test-secret" not in reply.model_dump_json() + caplog.text
 
@@ -163,6 +170,10 @@ def test_M06_partial_result_and_missing_eta_are_preserved():
     assert reply.status == "completed"
     assert reply.result.status == "partial"
     assert len(reply.result.unassigned_orders) == 1
+    assert set(reply.map_data.stops) == {
+        stop.order_id for route in reply.result.routes for stop in route.stops
+    }
+    assert reply.result.unassigned_orders[0].order_id not in reply.map_data.stops
     assert all(stop.eta is None for route in reply.result.routes for stop in route.stops)
 
 
@@ -243,7 +254,9 @@ def test_model_cannot_expand_unspecified_storage_constraints():
     backend = Backend(Settings())
     backend.dispatch = Mock(side_effect=AssertionError("변경된 조건으로 배차 금지"))
     reply = service(
-        extractor=OfflineExtractor(), model=ChangedConstraintsModel(), backend=backend,
+        extractor=OfflineExtractor(),
+        model=ChangedConstraintsModel(),
+        backend=backend,
     ).chat(TEXT)
     assert reply.status == "error"
     assert "제약조건" in reply.message

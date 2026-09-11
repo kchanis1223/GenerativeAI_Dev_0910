@@ -26,6 +26,10 @@ test('재질문에 같은 대화 ID로 답하고 부분 배차와 누락값을 �
               status: 'completed',
               questions: [],
               message: '일부 배차됐습니다.',
+              map_data: {
+                origin: { lat: 37.5, lon: 126.9, matched_address: '출발지' },
+                stops: { 'order-1': { lat: 37.6, lon: 127, matched_address: '서버 확정 배송지' } },
+              },
               result: {
                 status: 'partial',
                 routes: [
@@ -54,12 +58,23 @@ test('재질문에 같은 대화 ID로 답하고 부분 배차와 누락값을 �
   await expect(chat).toContainText('일부 배차')
   await expect(chat).toContainText('적재량 초과')
   await expect(chat).toContainText('거리 미제공')
+  await expect(page.locator('.delivery-pin')).toHaveCount(1)
+  await expect(page.locator('.leaflet-overlay-pane path[stroke-dasharray="8 5"]')).toHaveCount(1)
+  await page.locator('.delivery-pin').click()
+  await expect(page.locator('.leaflet-popup')).toContainText('서버 확정 배송지')
+  await expect(page.locator('.map-disclaimer')).toContainText('확정 좌표')
+  await page.getByRole('button', { name: '목업 데이터', exact: true }).click()
+  await expect(page.locator('.delivery-pin')).toHaveCount(0)
+  await page.getByRole('button', { name: '에이전트 결과', exact: true }).click()
+  await expect(page.locator('.delivery-pin')).toHaveCount(1)
   expect(bodies).toEqual([
     { message: '마포 배차해줘' },
     { message: '2026-09-11', thread_id: reply.thread_id },
   ])
   await expect(page.getByLabel('에이전트 메시지')).toBeDisabled()
   await page.getByRole('button', { name: '새 대화', exact: true }).click()
+  await expect(page.locator('.delivery-pin')).toHaveCount(0)
+  await expect(page.locator('.leaflet-overlay-pane path')).toHaveCount(0)
   await page.getByLabel('에이전트 메시지').fill('새 요청')
   await page.getByRole('button', { name: '메시지 전송', exact: true }).click()
   await expect.poll(() => bodies.length).toBe(3)
