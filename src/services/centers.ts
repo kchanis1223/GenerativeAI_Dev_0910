@@ -79,7 +79,7 @@ export function filterCenters(centers: Center[], query: string, region: string):
   )
 }
 
-// appKey is added by a future server proxy, never by the browser bundle.
+// appKey is added by the development server proxy, never by the browser bundle.
 export function validateProxyEndpoint(endpoint: string): string {
   const normalized = endpoint.trim()
   if (!normalized.startsWith('/api/') || /[\\?#\s]/.test(normalized) || normalized.includes('..')) {
@@ -126,13 +126,22 @@ export async function requestCenters(
       credentials: 'same-origin',
       redirect: 'error',
     })
-    if (!response.ok)
+    if (!response.ok) {
+      if (response.status === 503) {
+        const body = await response.json().catch(() => null)
+        if (body?.code === 'TMS_KEY_MISSING')
+          throw new CenterApiError(
+            '개발 서버에 TMAP_APP_KEY가 없습니다. 로컬 환경에 키를 설정하고 서버를 다시 시작하세요.',
+            'TMS_KEY_MISSING',
+          )
+      }
       throw new CenterApiError(
         response.status === 401
           ? '인증에 실패했습니다. 연결 서버의 appKey를 확인하세요.'
           : `API 요청에 실패했습니다. (HTTP ${response.status})`,
         String(response.status),
       )
+    }
     try {
       return await response.json()
     } catch {

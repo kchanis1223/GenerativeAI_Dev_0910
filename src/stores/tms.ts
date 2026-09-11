@@ -1,7 +1,7 @@
 import { reactive } from 'vue'
 import { createTmsState, resources } from '../data/logistics'
 import { apiCatalog, executeTms, TmsError } from '../services/tms-mock'
-import type { ApiOperation, TmsLog, TmsPayload } from '../types/tms'
+import type { MockContext, ApiOperation, TmsLog, TmsPayload } from '../types/tms'
 
 export const tmsState = reactive(createTmsState())
 export const tmsLogs = reactive<TmsLog[]>([])
@@ -15,9 +15,11 @@ export async function callTms(
   path: string,
   input: TmsPayload = {},
   scenario: MockScenario = 'success',
+  context: MockContext = {},
 ): Promise<TmsPayload> {
   const started = Date.now()
   const request = copy(input)
+  const mockContext = copy(context)
   delete request.appKey
   let response: TmsPayload
   await new Promise((resolve) => setTimeout(resolve, scenario === 'timeout' ? 1000 : 250))
@@ -29,7 +31,7 @@ export async function callTms(
     response =
       scenario === 'empty'
         ? { resultCode: '200', resultCount: 0, resultMessage: 'success', resultData: [] }
-        : executeTms(tmsState, path, request)
+        : executeTms(tmsState, path, request, Date.now(), mockContext)
   } catch (error) {
     response = {
       resultCode: error instanceof TmsError ? error.code : '400',
@@ -44,6 +46,7 @@ export async function callTms(
     title: operation.title,
     method: operation.method,
     request,
+    ...(mockContext.centerId ? { mockContext } : {}),
     response: copy(response),
     status:
       response.resultCode === '200'

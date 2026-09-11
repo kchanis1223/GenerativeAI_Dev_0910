@@ -2,117 +2,113 @@
 
 전체 프로젝트 개요와 담당자는 [README](../README.md)에 정리되어 있습니다.
 
-Vue 3 + TypeScript + Vite로 구현한 센터·차량·배송지 관리와 배차 흐름을 시연하는 프론트엔드입니다. 저장소를 clone한 폴더가 프로젝트 루트입니다.
+Vue 3 + TypeScript + Vite로 구현한 배차 시연 앱입니다. 기존 바다 랜딩에서 본사 운영자 진입 버튼을 누르면 물길이 갈라지는 전환을 거쳐 배차 화면으로 진입합니다. 배차 화면은 왼쪽에 선택·결과, 오른쪽에 큰 지도를 배치합니다. 바다로 로고와 청록색 톤을 유지하고, 랜딩은 SSRO WaterDrop, 배차 화면은 JayeonSans를 사용합니다.
 
 ## 실행
 
-Node.js 22.12 이상(또는 Vite가 지원하는 최신 LTS)이 필요합니다. 이 프로젝트는 Node.js 26.7 환경에서 검증했습니다.
+Node.js 22.12 이상이 필요하며 Node.js 26.7에서 검증했습니다.
 
 ```sh
 npm install
 npm run dev
 ```
 
-브라우저에서 http://127.0.0.1:5173 을 엽니다. 메인에서 바다로 로고를 누르면 바다가 양옆으로 갈라지며 줌 인한 뒤 센터 조회 화면으로 이동합니다. 워크스페이스는 API 키 없이 목업 조회를 실행합니다.
+http://127.0.0.1:5173 의 `/`는 물 표면·일렁이는 로고가 있는 랜딩입니다. 본사 운영자 진입 버튼을 누르면 `/workspace`의 배차 화면으로 이동하며, 모션 감소 설정에서는 즉시 전환합니다. 배차 화면 헤더의 로고로 랜딩에 돌아갈 수 있습니다. 이전 관리 메뉴의 `/workspace/*` 주소는 `/workspace`로 연결됩니다. 정적 배포에서는 `index.html` SPA fallback을 설정합니다.
 
-## 메인 페이지와 라우터
+## 화면 사용
 
-- `/`: 물 표면 사진, 일렁이는 바다로 로고, 뛰어오르는 작은 물고기를 표시합니다. 로고가 진입 링크입니다.
-- `/workspace`: 센터 조회 화면
-- `/workspace/vehicles`: 차량·센터·권역·교차금지선 관리
-- `/workspace/orders`: 배송지 관리
-- `/workspace/dispatch`: 배차 조건, 요청 키, 결과·미배차 사유
-- `/workspace/api`: 24개 API의 필드·공식 예제·목업 실행
-- `/workspace/flow`: 동작 흐름
-- `/workspace/history`: 실행 기록
+1. 왼쪽에서 출발 센터, 운행 차량, 배송할 주문을 선택합니다. 품목 필터에서 `전체 선택`은 현재 필터에 보이는 주문에만 적용됩니다.
+2. 출발 시간, 배분 기준, 센터 복귀 여부를 설정하고 **배차 요청**을 누릅니다.
+3. 중앙 모달에서 요청 수량과 경과 시간을 확인합니다. **닫기**는 계산을 유지하고 **배차 취소**는 결과 수신을 중단합니다. 계산 중에는 설정 변경과 중복 요청을 막습니다.
+4. 완료되면 같은 화면에 차량별 배송지·주문 수, 예상 운행 시간·거리, 중량·적재율을 표시합니다. 차량명을 누르면 해당 차량의 배송 순서·주소·희망시간·예상 도착/출발 시간을 펼칩니다.
+5. 차량별 체크박스로 지도 경로를 켜고 끄거나 **경로 모두 보기 / 경로 숨기기**를 사용합니다. 결과 영역을 접고 펼치거나 결과 JSON을 다운로드할 수 있습니다. 지도 크기는 결과를 펼쳐도 유지합니다.
 
-Vue Router로 URL, 뒤로가기, 직접 접속을 지원합니다. 정적 배포 서버에서는 `/workspace` 하위 경로를 `index.html`로 반환하는 SPA fallback 설정이 필요합니다.
+데스크톱은 왼쪽 약 44%·오른쪽 약 56%로 나뉩니다. 왼쪽 패널만 독립적으로 스크롤하고 지도는 헤더 아래 높이를 유지합니다. 배차 완료·차량 선택 시 결과로 스크롤합니다. 1100px 이하 화면에서는 선택·결과 다음에 지도를 배치합니다. 본문은 18px, 보조 글자는 15~16.5px, 화면 제목은 24px이며 버튼·아이콘·여백도 함께 확대했습니다.
 
-`src/asset`의 물 표면 JPG를 배경으로 사용하며 SVG `feTurbulence`와 `feDisplacementMap`, CSS 이동으로 일렁임을 만듭니다. 시스템의 모션 감소 설정을 켜면 배경과 글자 애니메이션을 멈춥니다. 메인의 글꼴 설정은 `SSRO_WaterDrop_OTF_Regular.otf`를 유지하며, 나머지 화면·입력·버튼·연결 설정은 `src/asset/JayeonSans (1)/web/woff2`의 JayeonSans를 전역 적용합니다. 폰트는 로컬 `@font-face`로 불러옵니다.
+선택 조건을 변경하면 이전 결과를 초기화합니다. 차량이 없거나 적재 한도를 넘은 주문은 미배차 사유로 표시합니다. 요청 실패·조회 시간 초과 이후에는 선택을 유지한 채 다시 요청할 수 있습니다. 새로고침 시 초기 데이터로 돌아갑니다.
 
-## 구현 범위
+## 기본 데이터
 
-- 센터명·주소·센터 ID 검색, 지역 필터, 센터 상세 보기
-- API의 위도·경도를 활용한 선택 가능한 위치 개략도 (배경은 실제 지도 아님)
-- 입력 → 조회 → 응답 검증 → 필터링 → 표시의 단계별 상태·로그
-- 정상 / 빈 목록 / HTTP 401 / 타임아웃 / 손상된 응답 테스트
-- 요청 미리보기, 원본 응답 JSON, 필터 적용 결과 JSON 다운로드
-- 현재 세션의 최근 30개 실행 기록
-- 모바일 대응, 키보드 센터 선택 및 연결 설정 다이얼로그
-- 동일 출처 프록시를 통한 실제 API 호출 어댑터
+`src/data/noryangjin.ts`가 `data/`의 CSV를 직접 읽습니다.
 
-현재 화면에서는 입력 검증, API 응답 처리, 오류 복구를 시연할 수 있습니다. 검색·검증·목업 배차는 TypeScript로 실행됩니다. LLM/LangChain 에이전트, 자연어 분석, 실제 TMS 배차, 지도 SDK, 백엔드 연결은 개발 예정입니다.
+| 데이터 | 구성                                                |
+| ------ | --------------------------------------------------- |
+| 센터   | 노량진센터 1곳                                      |
+| 지점   | 서울 실제 도로명 주소를 사용하는 가상 지점 20곳     |
+| 차량   | 활어차 2대, 냉장차 2대, 일반차 1대                  |
+| 주문   | 2026-09-11 배송 샘플 40건, 지점별 2품목, 총 3,125kg |
 
-## 확장 목업
+품목별 운송 가능 여부를 구분합니다. 냉장차 1호는 냉장, 2호는 냉동 설정이 가능한 차량으로 가정하며 활어·일반 주문은 각각 해당 차량에 배정합니다. 배송 데이터 날짜는 헤더에 표시하며 실행 날짜에 맞춰 자동 변경하지 않습니다.
 
-차량 6대·배송지 8곳·권역 3개·교차금지선 1개를 추가했습니다. 차량/배송지/권역은 단건 및 일괄 등록, 센터/교차금지선은 단건 등록을 지원하며 수정·삭제는 명세의 지원 범위를 따릅니다. API 탐색의 24개 실행 예제는 동일한 데이터를 사용합니다.
+기존 `executeTms(state, '/orderList')`와 같은 필드명으로 CSV를 읽습니다. `get_delivery_orders`라는 별도 백엔드 함수는 없습니다. 주소 20곳과 센터의 지오코딩 원본 응답 및 대조 결과, 전체 컬럼은 [데이터 안내서](../data/README.md)를 참고하세요.
 
-배차는 `allocation → mappingKey → allocationData`로 진행합니다. 차량 적재량(ton)과 배송 무게(kg)를 환산하고 차종·권역·적재 한도·투입 여부·교차금지선을 검사합니다. 결과에서 배송 순서, 예상 시간, 직선 경로, 미배차 이유를 확인할 수 있습니다. 데이터 변경은 현재 탭의 메모리에만 보관합니다.
+## 배차·지도 구현 범위
 
-[API별 명세·목업 정책·문서 예제의 차이](tms-api.md)에 자세히 정리했습니다. 확장 API는 목업 전용입니다. 실제 최적화·도로 경로를 재현한 결과가 아닙니다.
+배차는 `/allocation → mappingKey → /allocationData` 흐름의 프론트엔드 목업입니다. 요청 당시 데이터를 보관하고 최대 12회 결과를 조회합니다. 차량 유형·품목·권역·적재 한도·투입 여부·교차금지선을 검사하고, 선택한 기준으로 주문을 배분합니다. 시간은 배송 데이터 날짜와 출발 시간을 기준으로 계산합니다.
 
-## 실제 API 연결
+지도는 Leaflet과 OpenStreetMap 타일을 사용합니다. 실제 주소의 배송 위치와 차량별 색상·순서 번호를 표시합니다. 타일 로딩에는 인터넷 연결이 필요하며 실패하면 안내를 표시하고 배송 좌표는 유지합니다. [OpenStreetMap 타일 이용 정책](https://operations.osmfoundation.org/policies/tiles/)에 따라 출처를 표시하고 사전 다운로드하지 않습니다.
 
-참고: [SK TMS 센터 목록조회 명세](https://tms-skopenapi.readme.io/reference/센터-목록조회)
+**점선 경로는 좌표 간 직선이며 예상 시간은 시속 30km와 주문별 작업 시간을 합산한 시연 값입니다.** 실제 도로·교통·TMS 최적화 결과가 아닙니다. 납품 희망시간은 비교용으로 표시하며 시간창을 만족시키는 대기·최적화는 아직 계산하지 않습니다. 동일 지점의 서로 다른 품목은 개별 주문으로 처리합니다. 총 운행 시간은 차량별 시간 합계입니다.
 
-- 원본 API: `GET https://apis.openapi.sk.com/tms/centerList`
-- 응답: `resultCode`, `resultCount`, `resultMessage`, `resultData`
-- 센터: `centerId`, `centerName`, `address`, `latitude`, `longitude`, `seq`, `updateDate`
-- 지역과 검색어는 명세의 요청 파라미터가 아니므로 응답을 받은 후 클라이언트에서 필터링합니다.
+## API 연결 위치
 
-API 정보를 받으면 다음 부분을 연결하면 됩니다.
+현재 UI는 목업 전용이며 API 키·백엔드·LangChain Agent를 포함하지 않습니다. 실제 응답을 받으면 `createDispatchConsole`의 `DispatchRequest` 어댑터를 서버 프록시에 연결하고 결과 형식을 정규화합니다. API 탐색 화면은 제거했지만 [24개 API 명세·목업 정책](tms-api.md)과 `src/data/tms-api-catalog.json`, CRUD 엔진 및 검증은 유지합니다.
 
-1. 서버에 `/api/tms/centerList` 같은 프록시 경로를 준비합니다.
-2. 서버에서 앱 키를 주입해 원본 API를 호출하고 원본 JSON 응답을 반환합니다.
-3. 앱의 **연결 설정 → 실제 API · 서버 프록시**에서 해당 경로를 적용하고 조회를 실행합니다.
-
-현재 프록시 서버는 포함되어 있지 않습니다. 정적 페이지 서버에서 경로만 바꾸면 실제 연결이 되지는 않습니다. 프록시 장애 시 목업으로 자동 대체하지 않고 오류를 표시합니다. 실제 요청은 8초 후 중단하며, 자동 재시도 없이 사용자가 다시 실행할 수 있습니다.
-
-문서에는 `appKey`가 query 파라미터와 header 보안 스키마 양쪽에 기재되어 있습니다. 제공받는 인증 방식으로 서버 구현 시 확정해야 합니다. 공개 문서의 샘플 키는 사용하지 않습니다. 앱 키를 `VITE_*` 환경 변수나 브라우저 저장소에 넣지 마세요. Vite의 공개 환경 변수는 브라우저 번들에 포함됩니다.
+`MockContext.centerId`, `deliveryDate`, `returnToCenter`는 공식 요청 JSON과 분리한 목업 실행 정보입니다. 화면의 복귀 체크박스는 이 목업 설정으로 차량 CSV의 기본 종착지보다 우선합니다. 실제 API에서 센터·배송일·차량 종착지의 대응 방식은 실제 명세와 응답에 맞춰 연결해야 합니다. 기존 센터 프록시 어댑터는 `src/services/centers.ts`에 보관되어 있습니다.
 
 ## 주요 파일
 
 ```text
-src/App.vue                  RouterView
-src/router/index.ts          메인·워크스페이스 라우트
-src/views/LandingView.vue     Badaro 메인 페이지
-src/views/WorkspaceView.vue   조회 화면과 실행 상태 관리
-src/components/OceanTransition.vue 바다 분할·줌 전환
-src/views/LogisticsView.vue    차량·배송지·배차·API 화면
-src/components/TmsResources.vue 데이터 편집
-src/components/TmsDispatch.vue 배차 요청과 결과
-src/components/TmsExplorer.vue API 예제 실행
-src/stores/tms.ts             세션 데이터·API 로그
-src/services/tms-mock.ts      CRUD·배차 목업 엔진
-src/data/tms-api-catalog.json 24개 명세 필드·응답 예제
-src/components/PageSteps.vue  카드 구간 이동 내비게이션
-src/components/WaterSurface.vue 배경 사진과 일렁임 효과
-src/components/CenterMap.vue  좌표 기반 위치 개략도
-src/services/centers.ts       목업·실제 요청, 응답 검증, 필터링
-src/data/centers.ts           명세 형태를 따른 예제 데이터 8건
-src/types.ts                 API·실행 로그 타입
-src/style.css                반응형 스타일
+src/views/LandingView.vue               기존 바다·로고·물고기 랜딩
+src/components/OceanTransition.vue      바다 분할·줌 진입 전환
+src/views/DispatchConsoleView.vue       좌측 선택·결과 / 우측 지도 배차 화면
+src/stores/dispatch-console.ts          선택·요청·취소·결과 상태
+src/components/DispatchProgressModal.vue 계산 중 모달
+src/components/DeliveryMap.vue          실제 지도·직선 경로·배송 순서 마커
+src/data/noryangjin.ts                  CSV 기본 데이터 연결
+src/services/delivery-csv.ts            CSV 파싱·검증
+src/services/tms-mock.ts                명세 기반 CRUD·배차 목업
+src/style.css                          전역 폰트·청록색 반응형 스타일
 ```
 
-을지로센터는 API 문서 예제를 따르며 나머지는 가상의 시연용 데이터입니다. 실제 운영 현황을 뜻하지 않습니다. 최초 조회 시간은 실제 API 성능 수치가 아니라 목업 지연과 화면 단계 전환 시간을 합한 값입니다. 폰트는 외부 요청 없이 로컬 에셋으로 제공하며, 로딩 중에는 시스템 폰트로 표시합니다.
+바다로 로고는 `src/asset/badaro-logo.png`의 투명 PNG를 사용합니다. 기존 물 표면 사진·글꼴 등 원본 에셋도 보관합니다.
 
-## 검증 명령
+## 검증
+
+`npm run test:data`는 Python 데이터 검증입니다. `agent` 의존성이 설치된 가상환경을 활성화한 뒤 실행합니다. `npm run test:data:frontend`는 Vue 데이터 검증입니다.
 
 ```sh
 npm run lint
 npm run format:check
 npm run test
+npm run test:data
+npm run test:data:frontend
 npm run build
 npx playwright install chromium
-npm run test:e2e
+npm run test:e2e -- --workers=2
 ```
 
-단위 테스트는 응답 검증·검색·프록시 실패·실제 요청 중단을, 브라우저 테스트는 조회·선택·오류 복구·JSON 출력·프록시 연결 UI·모바일을 검증합니다. 브라우저 테스트의 프록시 응답은 Playwright로 대체하며 SK API의 실제 인증·통신을 검증한 것은 아닙니다.
+단위 테스트는 CSV와 저장된 지오코딩 근거, 24개 API 계약, 품목·적재·복귀 계산, 비동기 취소·중복 요청·오류 복구·조회 제한을 검증합니다. 브라우저 테스트는 랜딩과 진입 전환·복귀·모션 감소, 좌우 분할과 독립 스크롤, 모달, 결과·경로 선택, 미배차, 다운로드, 기존 주소 호환, 모바일과 타일 실패를 검증합니다. 자동 테스트의 지도 타일은 고정 이미지로 대체합니다. 실제 SK API의 인증·도로 경로는 검증 범위에 포함되지 않습니다.
 
-## 로고
+## 화면 예시
 
-바다로 로고의 투명 PNG는 `src/asset/badaro-logo.png`에 있습니다. 공통 `BadaroLogo.vue` 컴포넌트로 메인·헤더·푸터에 표시하며, `public/favicon.png`도 같은 이미지에서 만듭니다.
+- [데스크톱 배차 화면](screenshots/dispatch-desktop.png)
+- [모바일 배차 화면](screenshots/dispatch-mobile.png)
+- [랜딩 화면](screenshots/landing-desktop.png): 최대 1000px 로고에 배경 색조 블렌드와 흰 윤곽선·그림자를 적용합니다.
 
-로고는 2042×690 RGBA PNG입니다. 청록색 로고와 내부 파도 무늬를 남기고 배경을 투명하게 처리했습니다. 추출 과정은 선택적 개발 도구인 `scripts/extract-logo.py`에 기록했습니다(Pillow·NumPy·SciPy 필요, 앱 실행에는 불필요).
+## Python 채팅 연결 (B-15)
 
-메인의 물고기 효과는 `src/components/JumpingFish.vue`에서 SVG와 CSS로 구현합니다. 데스크톱 3마리·모바일 2마리가 시차를 두고 두 번씩 뛰어오르며 꼬리·물방울·착수 물결이 함께 움직입니다. 장식 요소는 클릭을 가로채지 않고, 모션 감소 설정에서는 숨기며 탭이 비활성화되면 일시 정지합니다.
+`agent/`에서 `USE_MOCK=1 MODEL_MODE=offline .venv/bin/python -m badaro.server --port 8000`을 실행하고 루트에서 `npm run dev`를 실행합니다. 본사물류운영자 화면에서 연결 상태와 실행 모드를 확인한 뒤 메시지를 전송합니다. 서버가 꺼져 있으면 ‘연결 확인’으로 다시 조회합니다.
+
+- 메시지와 서버 발급 thread_id만 전달합니다. 재질문은 같은 대화로 이어가고 종료된 요청은 새 대화로 구분합니다.
+- Python 결과는 채팅 안의 차량별 표로 표시합니다. 지점·주문 ID, 방문 순서, ETA, 거리·시간 및 미배정 사유를 보존합니다. 응답에 없는 품목·ETA·거리는 미제공으로 표시합니다.
+- blocked/error 응답과 부분 배차를 성공으로 바꾸지 않습니다. 응답 유실은 자동 재전송하지 않습니다.
+- 기존 프론트 목업 선택값과 지도는 Python 결과에 연결되지 않습니다. Python v2가 제공하지 않는 기사 역할·재배차도 미구현입니다.
+- `AGENT_INTEGRATION=1 npm run test:e2e`는 실행 중인 Python offline 서버로 재질문→배차 결과를 검증합니다. 기본 E2E는 HTTP 대역으로 대화 ID 유지·부분 배차·응답 유실을 검증합니다.
+
+### 채팅 연결 변경 이력
+
+| 날짜       | 변경 내용                                                                                                                                                                             |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-11 | B-17 로컬 API에 채팅을 연결하고 실행 모드·재질문·배차 결과·오류를 표시했습니다. Python v2 범위에 따라 본사 운영자 로컬 시연만 연결하며 기사 권한과 재배차는 남은 작업으로 구분합니다. |
+| 2026-09-11 | v2 MVP에 맞춰 점주 진입·화면을 제외하고 본사 운영자 진입만 남겼습니다. 이미지 경로를 영문으로 통일하고 Python·Vue 데이터 검증 명령을 분리했습니다.                                    |

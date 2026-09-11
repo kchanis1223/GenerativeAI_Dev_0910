@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: '22'
           cache: npm
       - run: npm ci
       - run: npm run lint
@@ -24,7 +24,7 @@ jobs:
   agent:
     runs-on: ubuntu-latest
     env:
-      USE_MOCK: "1"
+      USE_MOCK: '1'
     defaults:
       run:
         working-directory: agent
@@ -32,7 +32,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: '3.11'
           cache: pip
           cache-dependency-path: agent/pyproject.toml
       - run: python -m pip install -r requirements.txt

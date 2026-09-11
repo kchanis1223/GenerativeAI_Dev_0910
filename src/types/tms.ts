@@ -69,7 +69,14 @@ export interface TmsLog {
   title: string
   method: string
   request: TmsPayload
+  mockContext?: MockContext
   response: unknown
   status: 'success' | 'pending' | 'error'
   duration: number
+}
+
+export interface MockContext {
+  centerId?: string
+  deliveryDate?: string
+  returnToCenter?: boolean
 }

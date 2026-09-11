@@ -1,0 +1,6 @@
+﻿vehicleId,vehicleName,vehicleClass,centerId,weight,maxLoadKg,volume,vehicleType,supportedItemTypes,equipment,zoneCode,inputYn,skillPer,endLatitude,endLongitude,endAddress,seq,updateDate
+LIVE01,바다로 활어차 1호,활어차,CENTER-NR,2,2000,8,99,활어,수조·산소 공급,SEOUL,1,100,37.5147164,126.9377367,서울특별시 동작구 노들로 674,1,2026-09-11 06:00:00
+LIVE02,바다로 활어차 2호,활어차,CENTER-NR,2,2000,8,99,활어,수조·산소 공급,SEOUL,1,100,37.5147164,126.9377367,서울특별시 동작구 노들로 674,2,2026-09-11 06:00:00
+COLD01,바다로 냉장차 1호,냉장차,CENTER-NR,3,3000,12,02,냉장,냉장 설정,SEOUL,1,100,37.5147164,126.9377367,서울특별시 동작구 노들로 674,3,2026-09-11 06:00:00
+COLD02,바다로 냉장차 2호,냉장차,CENTER-NR,3,3000,12,02,냉동,냉동 설정 가능 차량을 가정,SEOUL,1,100,37.5147164,126.9377367,서울특별시 동작구 노들로 674,4,2026-09-11 06:00:00
+GENERAL01,바다로 일반차 1호,일반차,CENTER-NR,1,1000,6,01,일반,상온,SEOUL,1,100,37.5147164,126.9377367,서울특별시 동작구 노들로 674,5,2026-09-11 06:00:00

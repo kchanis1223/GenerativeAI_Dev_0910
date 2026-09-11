@@ -13,13 +13,13 @@
 
 프론트(Vue)는 저장소 루트의 `src/`, 에이전트(Python)는 `agent/` 아래에 둔다. 담당 폴더에서 작업한다. 다른 담당자의 파일을 수정해야 하면 대상 파일과 사유를 PR 본문에 적어 요청한다.
 
-| 폴더 | 담당 |
-|---|---|
-| `src/`, `tests/`, `public/`, `index.html`, vite·eslint 설정 (프론트) | 김강휘 |
-| `agent/badaro/schemas/`, `agent/prompts/` | 이준형 |
-| `agent/badaro/tools/`, `agent/data/`, `docs/tms-api.md`, `docs/api/` | 권유나 |
-| `agent/badaro/middleware/`, `agent/badaro/guardrails/` | 윤소영 |
-| `agent/tests/` | 김강휘 |
+| 폴더                                                                                                                                      | 담당   |
+| ----------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| `src/`, `tests/`, `public/`, `index.html`, vite·eslint 설정 (프론트)                                                                      | 가니 |
+| `agent/badaro/schemas/`, `agent/prompts/`                                                                                                 | 이준형 |
+| `agent/badaro/tools/`, `agent/data/`, `docs/tms-api.md`, `docs/api/`                                                                      | 권유나 |
+| `agent/badaro/middleware/`, `agent/badaro/guardrails/`                                                                                    | 윤소영 |
+| `agent/tests/`                                                                                                                            | 가니 |
 | `agent/badaro/agent.py`, `agent/requirements.txt`, `agent/pyproject.toml`, `agent/.env.example`, `README.md`, `docs/`(설계서), `.github/` | 김동찬 |
 
 공용 파일(`agent.py`, `requirements.txt`, `pyproject.toml`, `.env.example`, `README.md`)에 추가할 내용은 PR 본문에 대상 위치와 함께 요청한다.
@@ -79,10 +79,10 @@ git pull --rebase origin main
 - API명·필드명·기술 용어·테스트 입력의 뜻은 유지한다. 사용자 발화와 팀원 댓글을 문체 수정 목적으로 바꾸지 않는다.
 - 문맥에 맞는 짧은 문장을 쓴다. 같은 내용을 도입·본문·결론에서 반복하지 않는다.
 
-| 수정 전 | 수정 후 |
-| --- | --- |
-| 물류의 흐름을 더 가볍게 | 센터·차량·배송지·배차 관리 |
+| 수정 전                       | 수정 후                                        |
+| ----------------------------- | ---------------------------------------------- |
+| 물류의 흐름을 더 가볍게       | 센터·차량·배송지·배차 관리                     |
 | 조회 과정을 한눈에 확인하세요 | 현재 탭에서 실행한 조회 결과와 오류 기록입니다 |
-| 이것만 지키면 충돌 안 납니다 | 팀별 작업 경로와 검토 절차를 따릅니다 |
+| 이것만 지키면 충돌 안 납니다  | 팀별 작업 경로와 검토 절차를 따릅니다          |
 
 자동화 도구에도 같은 기준을 적용한다. 저장소의 `AGENTS.md`에 작업 지침을 둔다.

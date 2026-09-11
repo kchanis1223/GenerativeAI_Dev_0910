@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import waterPhoto from '../asset/물 표면.jpg'
+import waterPhoto from '../asset/water-surface.jpg'
 import { useReducedMotion } from '../composables/useReducedMotion'
 
 const reducedMotion = useReducedMotion()
@@ -51,7 +51,7 @@ const reducedMotion = useReducedMotion()
   position: absolute;
   inset: 0;
   overflow: hidden;
-  background: #07505f;
+  background: var(--primary-900);
 }
 .water-filter {
   position: absolute;

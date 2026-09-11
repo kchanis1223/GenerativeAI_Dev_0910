@@ -2,7 +2,7 @@
 
 바다로는 횟집 체인 본부의 물류 담당자를 위한 배차 지원 서비스입니다. 자연어 요청에서 배송 조건을 추출하고, 주문과 차량 정보를 확인해 TMAP TMS에 배차를 요청하도록 개발하고 있습니다. 활어 운송 시간, 차량 적재량, 지점별 납품시간을 고려합니다.
 
-현재는 Vue 화면에서 목업 데이터로 센터·차량·배송지를 관리하고 배차 결과를 조회할 수 있습니다. Python Agent는 요청 구조화·재질문·Tool 실행·결과 반환과 로컬 API를 제공합니다. Vue에서 이 API를 호출하는 연결은 #15에 남아 있습니다. 키 없는 합성 Mock 시연과 실제 외부 API 검증을 구분합니다.
+현재 Vue 화면은 센터·차량·주문 선택과 배차 결과를 왼쪽 패널에, 배송 위치·경로를 오른쪽 지도에 표시합니다. Python Agent는 요청 구조화·재질문·Tool 실행·결과 반환과 로컬 API를 제공합니다. 키 없는 합성 Mock 시연과 실제 외부 API 검증을 구분합니다.
 
 > SKALA 생성형 AI 서비스 개발(LangChain) 종합실습 · 5층 6반 3조
 
@@ -24,11 +24,11 @@ LLM은 요청 해석·구조화와 Tool 선택을 수행합니다. 검증된 배
 
 ## 구성
 
-| 구성 | 위치 | 설명 |
-|---|---|---|
-| 에이전트 (Python · LangChain) | `agent/` | LangChain Tool 통합, 요청별 State, 로컬 JSON API |
-| 화면 (Vue 3 · Vite) | `src/` | 센터·차량·배송지 관리, 배차 요청·결과, API 탐색. TMS 목업 내장 |
-| 문서 | `docs/` | 설계서, [TMS API 명세 정리](docs/tms-api.md), [프론트 가이드](docs/frontend.md) |
+| 구성                          | 위치     | 설명                                                                            |
+| ----------------------------- | -------- | ------------------------------------------------------------------------------- |
+| 에이전트 (Python · LangChain) | `agent/` | LangChain Tool 통합, 요청별 State, 로컬 JSON API                                |
+| 화면 (Vue 3 · Vite)           | `src/`   | 센터·차량·주문 선택, 배차 진행 모달·결과, Leaflet 배송 지도. TMS 목업 내장      |
+| 문서                          | `docs/`  | 설계서, [TMS API 명세 정리](docs/tms-api.md), [프론트 가이드](docs/frontend.md) |
 
 ## 실행
 
@@ -59,6 +59,10 @@ USE_MOCK=1 MODEL_MODE=offline python -m badaro.agent '2026-09-11 마포 서대�
 USE_MOCK=1 MODEL_MODE=offline python -m badaro.server --port 8000
 ```
 
+Python 서버를 켠 상태에서 루트의 `npm run dev`로 화면을 실행하고 본사물류운영자로 진입합니다. 채팅에 `마포 서대문 은평 배차해줘`를 입력한 뒤 배송일 질문에 `2026-09-11`로 답하면 Python 배차 결과를 표시합니다. Vite는 `/api/agent`를 로컬 Python 서버의 8000 포트로 전달합니다. 이 프록시는 개발 서버용이며 정적 배포에는 별도 서버 구성이 필요합니다.
+
+채팅의 실행 모드는 Python 서버 응답을 표시합니다. 아래 프론트 목업의 선택값·결과·지도는 채팅과 연결되지 않습니다. 새 요청은 ‘새 대화’로 시작하며, 응답이 유실되면 실행 여부를 확인하기 전 재전송하지 마세요. 재배차·기사 권한 검증은 현재 서버 범위에 포함되지 않습니다.
+
 `offline`은 제한된 입력 예시를 처리하는 대체 모델이며 실제 LLM이 아닙니다. 합성 배차 응답에는 ETA·거리가 없고 이를 임의로 채우지 않습니다. 설정·OpenAI 모드·API 응답 형식은 [Agent 실행 안내](docs/agent-integration.md)를 참고하세요.
 
 의존성은 `agent/pyproject.toml`에서 관리합니다. `requirements.txt`는 개발 도구를 포함한 패키지 설치 진입점입니다. 모델명은 설계서의 미확정 항목이므로 `.env.example`에서 비워 두었습니다.
@@ -81,7 +85,8 @@ agent/
   pyproject.toml       # Python 패키지·의존성·검증 설정
   requirements.txt
   .env.example
-src/                   # 기존 Vue 화면
+src/                   # Vue 통합 배차 화면
+data/                  # 프론트 목업용 노량진 배송 CSV·지오코딩 기록
 tests/                 # 프론트 단위·브라우저 테스트
 docs/                  # 설계서·프론트 가이드·API 문서
   api/                 # 인증키를 제거한 실 API 요청·응답 예시
@@ -95,13 +100,13 @@ CI는 프론트 lint·단위 테스트·build와 에이전트 Ruff·문법·impo
 
 ## 팀
 
-| 이름 | 역할 | 담당 |
-|---|---|---|
-| 김동찬 | PM / 아키텍트 | `agent/badaro/agent.py`, `README`, `docs/`, `.github/` |
-| 이준형 | 모델 / 프롬프트 | `agent/badaro/schemas/`, `agent/prompts/` |
-| 권유나 | API / Tool | `agent/badaro/tools/`, `agent/data/`, `docs/tms-api.md` |
-| 윤소영 | 미들웨어 / 가드레일 | `agent/badaro/middleware/`, `agent/badaro/guardrails/` |
-| 김강휘 | 프론트 / 테스트 | `src/`, `tests/`, `agent/tests/` |
+| 이름   | 역할                | 담당                                                    |
+| ------ | ------------------- | ------------------------------------------------------- |
+| 김동찬 | PM / 아키텍트       | `agent/badaro/agent.py`, `README`, `docs/`, `.github/`  |
+| 이준형 | 모델 / 프롬프트     | `agent/badaro/schemas/`, `agent/prompts/`               |
+| 권유나 | API / Tool          | `agent/badaro/tools/`, `agent/data/`, `docs/tms-api.md` |
+| 윤소영 | 미들웨어 / 가드레일 | `agent/badaro/middleware/`, `agent/badaro/guardrails/`  |
+| 김강휘 | 프론트 / 테스트     | `src/`, `tests/`, `agent/tests/`                        |
 
 ## 작업 절차
 
