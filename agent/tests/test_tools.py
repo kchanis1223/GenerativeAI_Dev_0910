@@ -55,6 +55,16 @@ def test_b10_get_available_vehicles_filters_excluded_and_limits_count() -> None:
     assert [vehicle.vehicle_id for vehicle in vehicles] == ["LIVE02", "COLD01"]
 
 
+def test_b10_missing_csv_raises_tool_error(monkeypatch, tmp_path) -> None:
+    from importlib import import_module
+
+    sample_data = import_module("badaro.tools._sample_data")
+    monkeypatch.setattr(sample_data, "_DATA_DIR", tmp_path)
+    with pytest.raises(ToolErrorException) as exc_info:
+        get_delivery_orders("CENTER-NR", datetime(2026, 9, 11).date(), None, None)
+    assert exc_info.value.error.code is ToolErrorCode.INTERNAL_ERROR
+
+
 def test_optimize_dispatch_does_not_expose_runtime_context() -> None:
     with pytest.raises(NotImplementedError):
         optimize_dispatch([], [], None)
