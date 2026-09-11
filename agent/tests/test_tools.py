@@ -45,7 +45,7 @@ def test_b03_tool_signatures_are_importable(tool, parameters) -> None:
 
 @pytest.mark.parametrize(
     "tool",
-    [get_delivery_orders, get_available_vehicles, geocode_address],
+    [get_delivery_orders, get_available_vehicles],
 )
 def test_b03_tools_are_stubs(tool) -> None:
     with pytest.raises(NotImplementedError):
@@ -55,6 +55,71 @@ def test_b03_tools_are_stubs(tool) -> None:
 def test_optimize_dispatch_does_not_expose_runtime_context() -> None:
     with pytest.raises(NotImplementedError):
         optimize_dispatch([], [], None)
+
+
+def test_geocode_address_parses_tmap_response_and_caches(monkeypatch) -> None:
+    from importlib import import_module
+
+    geocode_module = import_module("badaro.tools.geocode_address")
+
+    geocode_module.clear_geocode_cache()
+    monkeypatch.setenv("TMAP_APP_KEY", "test-key")
+    calls = []
+
+    def fake_get(url, *, params, timeout):
+        calls.append((url, params, timeout))
+        return type(
+            "Response",
+            (),
+            {
+                "status_code": 200,
+                "json": lambda self: {
+                    "coordinateInfo": {
+                        "totalCount": "1",
+                        "coordinate": [
+                            {
+                                "city_do": "서울",
+                                "gu_gun": "중구",
+                                "newLat": "37.5",
+                                "newLon": "126.9",
+                            }
+                        ],
+                    }
+                },
+            },
+        )()
+
+    monkeypatch.setattr(geocode_module.httpx, "get", fake_get)
+    first = geocode_address(" 서울시 중구 ")
+    second = geocode_address("서울시 중구")
+
+    assert first.status is GeocodeStatus.OK
+    assert first.candidates[0].lat == 37.5
+    assert second == first
+    assert len(calls) == 1
+
+
+def test_geocode_address_returns_not_found(monkeypatch) -> None:
+    from importlib import import_module
+
+    geocode_module = import_module("badaro.tools.geocode_address")
+
+    geocode_module.clear_geocode_cache()
+    monkeypatch.setenv("TMAP_APP_KEY", "test-key")
+    monkeypatch.setattr(
+        geocode_module.httpx,
+        "get",
+        lambda *args, **kwargs: type(
+            "Response",
+            (),
+            {"status_code": 200, "json": lambda self: {"coordinateInfo": {"totalCount": "0"}}},
+        )(),
+    )
+
+    result = geocode_address("가나다라 물류센터")
+
+    assert result.status is GeocodeStatus.NOT_FOUND
+    assert result.candidates == []
 
 
 def test_execute_optimize_dispatch_rejects_missing_runtime_context_data() -> None:
