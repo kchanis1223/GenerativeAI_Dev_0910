@@ -6,10 +6,19 @@ from pydantic import ValidationError
 from badaro.schemas import (
     DispatchRequest,
     DispatchResult,
+    DispatchRuntimeContext,
     DispatchStatus,
     Priority,
     UnassignedOrder,
 )
+
+
+def test_runtime_context_keeps_results_keyed_by_id() -> None:
+    context = DispatchRuntimeContext()
+
+    assert context.orders == {}
+    assert context.vehicles == {}
+    assert context.geocodes == {}
 
 
 def test_dispatch_request_uses_agreed_defaults() -> None:

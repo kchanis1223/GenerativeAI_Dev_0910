@@ -36,6 +36,9 @@ class ToolErrorCode(StrEnum):
     UPSTREAM_ERROR = "upstream_error"
     UNAUTHORIZED = "unauthorized"
     INVALID_INPUT = "invalid_input"
+    MISSING_CONTEXT = "missing_context"
+    GEOCODE_NOT_FOUND = "geocode_not_found"
+    GEOCODE_AMBIGUOUS = "geocode_ambiguous"
     INTERNAL_ERROR = "internal_error"
 
 
@@ -109,6 +112,19 @@ class GeocodeResult(BaseModel):
     candidates: list[GeocodeCandidate]
 
 
+class DispatchRuntimeContext(BaseModel):
+    """Tool 실행 계층이 조회 결과를 공유하기 위한 실행 컨텍스트.
+
+    이 값은 LLM이 생성하지 않고 Agent State에서 주입한다. 지오코딩 결과는
+    destination_id를 키로 보관하여 배차 Tool이 임의로 주소나 좌표를 바꾸지
+    못하게 한다.
+    """
+
+    orders: dict[str, Order] = Field(default_factory=dict)
+    vehicles: dict[str, Vehicle] = Field(default_factory=dict)
+    geocodes: dict[str, GeocodeResult] = Field(default_factory=dict)
+
+
 class DispatchConstraints(BaseModel):
     priority: Priority
     deadline: datetime | None = None
@@ -144,7 +160,11 @@ class DispatchResult(BaseModel):
 
 
 class ToolError(BaseModel):
-    """Tool 호출 실패를 LLM에 전달하기 위한 구조화된 오류 데이터."""
+    """Tool 호출 실패를 LLM에 전달하기 위한 구조화된 오류 데이터.
+
+    재시도 여부는 이 값을 소비하는 Tool 실행 계층이 ``retryable``을
+    기준으로 판단한다. 개별 Tool은 재시도 자체를 수행하지 않는다.
+    """
 
     code: ToolErrorCode
     message: str
@@ -157,4 +177,3 @@ class ToolErrorException(Exception):
     def __init__(self, error: ToolError) -> None:
         self.error = error
         super().__init__(error.message)
-
