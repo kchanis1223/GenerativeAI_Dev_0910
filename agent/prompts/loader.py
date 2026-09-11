@@ -31,7 +31,7 @@ def load_system_prompt() -> str:
 
 
 def load_fewshot_prompt() -> str:
-    """재배차·일괄 배차 예시 프롬프트를 반환한다."""
+    """정상 배차·입력 보완·실패 안내 예시를 반환한다."""
 
     return _read_prompt("fewshot.md")
 
