@@ -21,7 +21,11 @@ dev = ["pytest>=8,<10", "ruff>=0.12,<1"]
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["badaro*"]
+include = ["badaro*", "prompts*"]
+
+[tool.setuptools.package-data]
+prompts = ["*.md"]
+"badaro.tools" = ["mock_responses/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
