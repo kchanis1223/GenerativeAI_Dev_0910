@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import waterPhoto from '../asset/물 표면.jpg'
+import waterPhoto from '../asset/water-surface.jpg'
 import { useReducedMotion } from '../composables/useReducedMotion'
 
 const reducedMotion = useReducedMotion()

@@ -10,17 +10,11 @@ export const router = createRouter({
       name: 'dispatch',
       component: () => import('../views/DispatchConsoleView.vue'),
     },
-    { path: '/owner', name: 'owner', component: () => import('../views/OwnerView.vue') },
     { path: '/workspace/:pathMatch(.*)*', redirect: '/workspace' },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
   scrollBehavior: () => ({ top: 0 }),
 })
 router.afterEach((to) => {
-  document.title =
-    to.name === 'home'
-      ? 'Badaro'
-      : to.name === 'owner'
-        ? '점주님 · Badaro'
-        : '본사물류운영자 · Badaro'
+  document.title = to.name === 'home' ? 'Badaro' : '본사물류운영자 · Badaro'
 })

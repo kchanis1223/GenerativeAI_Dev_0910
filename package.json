@@ -13,7 +13,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test:data": "vitest run tests/unit/delivery-data.test.ts"
+    "test:data:frontend": "vitest run tests/unit/delivery-data.test.ts"
   },
   "dependencies": {
     "@lucide/vue": "^1.44.0",

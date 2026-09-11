@@ -9,12 +9,12 @@ import { useReducedMotion } from '../composables/useReducedMotion'
 const reduceMotion = useReducedMotion()
 const router = useRouter()
 const navigationError = ref('')
-async function enter(event: MouseEvent, destination: '/owner' | '/workspace') {
+async function enter(event: MouseEvent) {
   if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return
   event.preventDefault()
   navigationError.value = ''
   try {
-    await enterWorkspace(router, destination)
+    await enterWorkspace(router)
   } catch {
     navigationError.value = '화면을 열지 못했습니다. 진입 버튼을 눌러 다시 시도해 주세요.'
   }
@@ -81,19 +81,12 @@ async function enter(event: MouseEvent, destination: '/owner' | '/workspace') {
       <h1 class="badaro-wordmark" aria-label="Badaro">
         <BadaroLogo decorative priority />
       </h1>
-      <nav class="entry-options" aria-label="사용자별 페이지 진입">
-        <a
-          :href="router.resolve('/owner').href"
-          class="role-entry owner-entry"
-          :aria-disabled="oceanTransition.active"
-          @click="enter($event, '/owner')"
-          >점주님 페이지 진입 <span aria-hidden="true">↗</span></a
-        >
+      <nav class="entry-options" aria-label="본사 운영자 페이지 진입">
         <a
           :href="router.resolve('/workspace').href"
           class="role-entry operator-entry"
           :aria-disabled="oceanTransition.active"
-          @click="enter($event, '/workspace')"
+          @click="enter($event)"
           >본사물류운영자 페이지 진입 <span aria-hidden="true">↗</span></a
         >
       </nav>
