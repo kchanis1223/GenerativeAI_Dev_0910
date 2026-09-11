@@ -1,6 +1,6 @@
 # B-02 TMAP 및 TMS API 첫 호출
 
-2026-09-11에 바다로 앱의 Free TMAP 및 Free TMAP TMS 상품으로 실제 호출을 확인했다. 저장된 예시에서는 앱키를 제거했으며 실제 키는 `agent/.env`의 `TMAP_APP_KEY`에서만 관리한다.
+2026-09-11에 바다로 앱의 Free TMAP 및 Free TMAP TMS 상품으로 실제 호출을 확인했다. 저장된 예시에서는 앱키를 제거했으며 당시에는 `agent/.env`의 `TMAP_APP_KEY`를 사용했다. 현재 실행은 TMAP_APP_KEY·TMS_APP_KEY를 분리하며 [Agent 안내](../agent-integration.md)를 따른다.
 
 ## 확인 결과
 
@@ -124,13 +124,13 @@ Accept: application/json
 
 실제 응답 예시는 [tms-allocation-data-response.json](./tms-allocation-data-response.json)을 참고한다.
 
-## 저장 응답 Mock 실행
+## B-02 저장 응답 재생
 
-`USE_MOCK=1`은 위 B-02 요청을 재생하는 모드다. 앱키가 없어도 동작하며 외부 HTTP를 호출하지 않는다. 다른 주소·주문·차량·출발시각이나 지원하지 않는 API는 저장 응답이 없다는 오류로 중단한다. 이를 실제 주소 검색 실패로 간주하지 않는다.
+`badaro.tools`의 HTTP 어댑터에 직접 적용한 `USE_MOCK=1`은 위 B-02 요청을 재생한다. Agent의 `runtime/backend.py`는 별도의 합성 시연 응답을 사용한다. 앱키가 없어도 동작하며 외부 HTTP를 호출하지 않는다. 다른 주소·주문·차량·출발시각이나 지원하지 않는 API는 저장 응답이 없다는 오류로 중단한다. 이를 실제 주소 검색 실패로 간주하지 않는다.
 
 응답 JSON은 설치된 Python 패키지에서도 사용할 수 있도록 `agent/badaro/tools/mock_responses/`에 포함한다. 원본은 이 폴더의 B-02 기록이며 테스트로 두 사본의 일치를 확인한다. 지오코딩 캐시는 Mock과 실제 모드를 구분한다. `USE_MOCK=0`은 기존 실제 HTTP 경로를 사용한다.
 
-이 PR은 B-02 저장 응답 어댑터다. 기존 CSV의 MVP 시연 주문·차량에 맞는 응답 준비와 Agent 실행 연결은 #17·#19에 남아 있다. CSV 전체가 이 응답으로 배차되는 것은 아니다.
+이 기록은 B-02 저장 응답 어댑터의 범위다. 이후 Agent 합성 Mock과 상온 1건 실연동을 연결했으며 [실행 기록](../agent-integration.md)에서 구분한다. CSV 전체가 이 B-02 응답으로 배차되는 것은 아니다.
 
 ## 배차 미배정과 검증 오류
 
