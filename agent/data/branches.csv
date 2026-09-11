@@ -1,0 +1,21 @@
+﻿branchId,branchName,centerId,address,latitude,longitude,zoneCode,serviceTime,addressSource
+S01,바다로 마포지점,CENTER-NR,서울특별시 마포구 월드컵로 212,37.5663245,126.9014910,SEOUL,10,https://www.seoul.go.kr/seoul/autonomy.do
+S02,바다로 서대문지점,CENTER-NR,서울특별시 서대문구 연희로 248,37.5791820,126.9367984,SEOUL,10,https://www.seoul.go.kr/seoul/autonomy.do
+S03,바다로 은평지점,CENTER-NR,서울특별시 은평구 은평로 195,37.6024668,126.9288202,SEOUL,10,https://www.seoul.go.kr/seoul/autonomy.do
+S04,바다로 영등포지점,CENTER-NR,서울특별시 영등포구 당산로 123,37.5264807,126.8956526,SEOUL,10,https://www.seoul.go.kr/seoul/autonomy.do
+S05,바다로 양천지점,CENTER-NR,서울특별시 양천구 목동동로 257,37.5265200,126.8752476,SEOUL,10,https://www.e-hyundai.com/newPortal/DP/DP000000_V.do?branchCd=B00142000
+S06,바다로 강서지점,CENTER-NR,서울특별시 강서구 화곡로 302,37.5506590,126.8497700,SEOUL,10,https://www.seoul.go.kr/seoul/autonomy.do
+S07,바다로 구로지점,CENTER-NR,서울특별시 구로구 가마산로 245,37.4955112,126.8882948,SEOUL,10,https://www.seoul.go.kr/seoul/autonomy.do
+S08,바다로 금천지점,CENTER-NR,서울특별시 금천구 시흥대로73길 70,37.4568996,126.8953809,SEOUL,10,https://www.seoul.go.kr/seoul/autonomy.do
+S09,바다로 관악지점,CENTER-NR,서울특별시 관악구 관악로 145,37.4784684,126.9511015,SEOUL,10,https://www.seoul.go.kr/seoul/autonomy.do
+S10,바다로 서초지점,CENTER-NR,서울특별시 서초구 남부순환로 2584,37.4836087,127.0327736,SEOUL,10,https://www.seoul.go.kr/seoul/autonomy.do
+S11,바다로 강남지점,CENTER-NR,서울특별시 강남구 압구정로 165,37.5273929,127.0275065,SEOUL,10,https://e-hyundai.com/newPortal/CS/CS006000_M.do
+S12,바다로 송파지점,CENTER-NR,서울특별시 송파구 올림픽로 326,37.5145656,127.1060321,SEOUL,10,https://www.seoul.go.kr/seoul/autonomy.do
+S13,바다로 강동지점,CENTER-NR,서울특별시 강동구 천호대로 1005,37.5389380,127.1240730,SEOUL,10,https://www.ehyundai.com/newPortal/DP/WC/WC000000_V.do?branchCd=B00126000
+S14,바다로 광진지점,CENTER-NR,서울특별시 광진구 자양로 117,37.5384976,127.0819157,SEOUL,10,https://www.gwangjin.go.kr/portal/bbs/B0000043/list.do?menuNo=200259&pageIndex=
+S15,바다로 성동지점,CENTER-NR,서울특별시 성동구 고산자로 270,37.5634661,127.0368984,SEOUL,10,https://www.seoul.go.kr/seoul/autonomy.do
+S16,바다로 동대문지점,CENTER-NR,서울특별시 동대문구 천호대로 145,37.5745240,127.0396500,SEOUL,10,https://www.seoul.go.kr/seoul/autonomy.do
+S17,바다로 중랑지점,CENTER-NR,서울특별시 중랑구 봉화산로 179,37.6063242,127.0925842,SEOUL,10,https://www.seoul.go.kr/seoul/autonomy.do
+S18,바다로 성북지점,CENTER-NR,서울특별시 성북구 보문로 168,37.5894684,127.0168275,SEOUL,10,https://www.seoul.go.kr/seoul/autonomy.do
+S19,바다로 용산지점,CENTER-NR,서울특별시 용산구 녹사평대로 150,37.5325270,126.9904900,SEOUL,10,https://www.seoul.go.kr/seoul/autonomy.do
+S20,바다로 중구지점,CENTER-NR,서울특별시 중구 남대문로 81,37.5648738,126.9817344,SEOUL,10,https://mw.lotteshopping.com/main
