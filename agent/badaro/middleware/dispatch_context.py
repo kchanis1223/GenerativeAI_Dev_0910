@@ -3,6 +3,9 @@
 State 의 현재 배차 조건을 필요한 만큼만 프롬프트에 주입한다.
 지점 전체 목록을 매 turn 반복 주입하지 않고 요약과 참조 ID 로 전달한다.
 
+흐름 차단: 조회 실패 시 can_jump_to=["end"] 로 선언한 훅에서 jump_to="end" 를 반환해야
+실제로 모델 호출이 멈춘다. 선언이 없으면 안내만 하고 모델이 그대로 호출된다.
+
 v1.3 반영: DispatchRequest 필드는 depot_id, destination_ids, delivery_date, vehicle_count,
            storage_types, deadline 등이다. destination_ids 가 null 이면 조회 범위 미지정이다.
 
@@ -90,7 +93,7 @@ def summarize_request(state: dict[str, Any]) -> str | None:
     return "\n".join(lines)
 
 
-@before_model
+@before_model(can_jump_to=["end"])
 def dispatch_context(state: dict[str, Any], runtime: Any) -> dict[str, Any] | None:
     """요약본을 주입한다. 조회 실패면 재배차를 중단하고 조건 확인을 요청한다."""
     if resolve_mode(state) == "load_failed":

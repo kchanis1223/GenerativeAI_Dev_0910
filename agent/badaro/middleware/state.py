@@ -5,6 +5,9 @@
 geocodes 는 GeocodeResult.input_address 를 키로 보관한다.
 주문·차량 조회 결과는 orders·vehicles 에 요청별로 둔다.
 
+state_load_error 는 저장소 조회 실패 신호다. 값이 있으면 기존 조건을 전제한 재배차를 중단한다.
+result_validation_retries 는 결과 재생성 횟수다. 두 키 모두 이름을 #17 과 맞춰야 한다.
+
 ApprovalStatus 는 배차 승인 절차의 상태이며, badaro.schemas.DispatchStatus
 (success/partial/failed)와 다른 개념이라 이름을 분리했다. 아직 합의 전 항목이다.
 설계서에 없는 항목은 값이 없으면 동작하지 않는다.
@@ -39,6 +42,9 @@ class BadaroState(AgentState, total=False):
     orders: dict[str, Any]
     vehicles: dict[str, Any]
 
+    state_load_error: str | None
+    result_validation_retries: int
+
     approval_status: ApprovalStatus
     confirmed_snapshot: Annotated[list[Any], operator.add]
     constraint_warnings: Annotated[list[dict[str, Any]], operator.add]
@@ -54,6 +60,8 @@ def initial_state() -> dict[str, Any]:
         "geocodes": {},
         "orders": {},
         "vehicles": {},
+        "state_load_error": None,
+        "result_validation_retries": 0,
     }
 
 
