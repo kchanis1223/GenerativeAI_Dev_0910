@@ -1,4 +1,4 @@
-import type { Center } from '../types'
+import type { Center } from '../../src/types'
 
 // Demonstration fixtures only. These do not represent an actual customer's centers.
 export const mockCenters: Center[] = [

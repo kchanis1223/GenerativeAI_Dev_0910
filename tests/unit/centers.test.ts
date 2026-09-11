@@ -1,11 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { mockCenters } from '../../src/data/centers'
-import {
-  filterCenters,
-  requestCenters,
-  validateProxyEndpoint,
-  validateResponse,
-} from '../../src/services/centers'
+import { mockCenters } from '../fixtures/centers'
+import { requestCenters, validateProxyEndpoint, validateResponse } from '../../src/services/centers'
 
 const valid = () => ({
   resultCode: '200',
@@ -18,13 +13,9 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-describe('센터 응답 검증 및 검색', () => {
-  it('명세의 필드를 보존하고 이름·주소·ID와 지역을 함께 검색한다', () => {
+describe('센터 응답 검증', () => {
+  it('명세의 필드를 보존한다', () => {
     expect(validateResponse(valid()).resultData).toEqual(mockCenters)
-    expect(filterCenters(mockCenters, '  EULJIRO  ', '전체')[0]?.centerName).toBe('을지로센터')
-    expect(filterCenters(mockCenters, '강남', '서울특별시')).toHaveLength(1)
-    expect(filterCenters(mockCenters, '강남', '경기도')).toHaveLength(0)
-    expect(filterCenters(mockCenters, '', '경기도')).toHaveLength(2)
   })
   it('빈 응답은 정상 결과로 처리한다', () => {
     expect(validateResponse({ ...valid(), resultCount: 0, resultData: [] }).resultData).toEqual([])
@@ -56,7 +47,7 @@ describe('실제 API 연결 어댑터', () => {
   it('서버 프록시에서 받은 데이터를 반환하고 브라우저에 앱 키를 요구하지 않는다', async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(valid())))
     vi.stubGlobal('fetch', fetchMock)
-    const result = await requestCenters({ mode: 'proxy', endpoint: '/api/tms/centerList' })
+    const result = await requestCenters('/api/tms/centerList')
     expect(validateResponse(result).resultCount).toBe(8)
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/tms/centerList',
@@ -65,15 +56,13 @@ describe('실제 API 연결 어댑터', () => {
   })
   it('HTTP 401을 목업으로 대체하지 않고 오류를 반환한다', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{}', { status: 401 })))
-    await expect(
-      requestCenters({ mode: 'proxy', endpoint: '/api/tms/centerList' }),
-    ).rejects.toMatchObject({ code: '401' })
+    await expect(requestCenters('/api/tms/centerList')).rejects.toMatchObject({ code: '401' })
   })
   it('설정되지 않은 경로가 HTML을 반환하면 연결 오류를 안내한다', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('<!doctype html>')))
-    await expect(
-      requestCenters({ mode: 'proxy', endpoint: '/api/tms/centerList' }),
-    ).rejects.toMatchObject({ code: 'INVALID_JSON' })
+    await expect(requestCenters('/api/tms/centerList')).rejects.toMatchObject({
+      code: 'INVALID_JSON',
+    })
   })
   it('8초 후 실제 네트워크 요청을 중단한다', async () => {
     vi.useFakeTimers()
@@ -88,7 +77,7 @@ describe('실제 API 연결 어댑터', () => {
           }),
       ),
     )
-    const request = requestCenters({ mode: 'proxy', endpoint: '/api/tms/centerList' })
+    const request = requestCenters('/api/tms/centerList')
     const assertion = expect(request).rejects.toMatchObject({ code: 'TIMEOUT' })
     await vi.advanceTimersByTimeAsync(8000)
     await assertion

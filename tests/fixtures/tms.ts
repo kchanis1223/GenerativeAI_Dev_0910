@@ -1,7 +1,8 @@
 import { reactive } from 'vue'
-import { createTmsState, resources } from '../data/logistics'
-import { apiCatalog, executeTms, TmsError } from '../services/tms-mock'
-import type { MockContext, ApiOperation, TmsLog, TmsPayload } from '../types/tms'
+import { createTmsState } from './logistics'
+import { resources } from '../../src/data/tms-resources'
+import { apiCatalog, executeTms, TmsError } from '../../src/services/tms-mock'
+import type { MockContext, ApiOperation, TmsLog, TmsPayload } from '../../src/types/tms'
 
 export const tmsState = reactive(createTmsState())
 export const tmsLogs = reactive<TmsLog[]>([])

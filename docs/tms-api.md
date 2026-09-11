@@ -31,7 +31,7 @@
 
 ## 데이터 연결
 
-통합 배차 화면은 `src/data/noryangjin.ts`에서 센터 1곳·차량 5대·지점 20곳·주문 40건의 CSV를 읽고 `src/stores/dispatch-console.ts`에서 요청 상태를 관리합니다. `src/services/tms-mock.ts`가 순수 TypeScript로 요청을 처리합니다. 아래의 기존 CRUD 예제 상태와 `src/stores/tms.ts`는 API 계약 검증용으로 유지합니다.
+통합 배차 화면은 `src/data/noryangjin.ts`에서 센터 1곳·차량 5대·지점 20곳·주문 40건의 CSV를 읽고 `src/stores/dispatch-console.ts`에서 요청 상태를 관리합니다. `src/services/tms-mock.ts`가 순수 TypeScript로 요청을 처리합니다. 아래의 기존 CRUD 예제 상태와 `tests/fixtures/tms.ts`는 API 계약 검증용으로 유지합니다.
 
 - API 계약 검증용 데이터: 센터 8곳, 권역 3개, 차량 6대, 배송지 8곳, 교차금지선 1개.
 - 차량은 상온·냉장·투입 제외·숙련도 차이를 포함합니다. 배송지에는 차량이 없는 인천 권역의 미배차 예제가 포함됩니다.

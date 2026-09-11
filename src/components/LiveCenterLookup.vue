@@ -19,9 +19,7 @@ async function lookup() {
   loaded.value = false
   centers.value = []
   try {
-    const result = validateResponse(
-      await requestCenters({ mode: 'proxy', endpoint: '/api/tms/centerList' }),
-    )
+    const result = validateResponse(await requestCenters('/api/tms/centerList'))
     if (disposed) return
     centers.value = result.resultData
     loaded.value = true

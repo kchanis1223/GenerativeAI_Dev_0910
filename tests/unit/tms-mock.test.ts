@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeEach } from 'vitest'
-import { createTmsState } from '../../src/data/logistics'
+import { createTmsState } from '../fixtures/logistics'
 import { apiCatalog, executeTms, planAllocation } from '../../src/services/tms-mock'
-import { callTms, resetTms, sampleRequest, tmsState } from '../../src/stores/tms'
+import { callTms, resetTms, sampleRequest, tmsState } from '../fixtures/tms'
 const now = new Date('2026-09-10T00:00:00Z').getTime()
 const params = {
   allocationType: '1',
