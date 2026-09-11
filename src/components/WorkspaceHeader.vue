@@ -4,7 +4,7 @@ import BadaroLogo from './BadaroLogo.vue'
 const route = useRoute()
 const router = useRouter()
 const links = [
-  { path: '/workspace', label: '센터 워크스페이스' },
+  { path: '/workspace', label: '센터 조회' },
   { path: '/workspace/vehicles', label: '차량 정보' },
   { path: '/workspace/orders', label: '배송지 정보' },
   { path: '/workspace/dispatch', label: '배차 요청' },
@@ -31,7 +31,7 @@ const links = [
         </button>
       </nav>
       <div class="header-actions">
-        <slot><span class="mock-badge">MOCK DEMO</span></slot>
+        <slot><span class="mock-badge">목업 모드</span></slot>
       </div>
     </div>
   </header>

@@ -131,7 +131,7 @@ function eta(value: string) {
     <div class="tms-section-heading">
       <div>
         <h2>배차 조건 설정</h2>
-        <p>차량과 배송지를 연결해 하루의 배송 흐름을 확인하세요.</p>
+        <p>투입 차량과 배송지, 출발 시간, 적재 기준을 설정하세요.</p>
       </div>
       <span class="tms-count">01</span>
     </div>

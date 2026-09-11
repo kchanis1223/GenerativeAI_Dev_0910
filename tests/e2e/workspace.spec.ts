@@ -103,7 +103,7 @@ test('모바일 레이아웃과 키보드로 설정 닫기', async ({ page }) =>
   await page.keyboard.press('Escape')
   await expect(page.getByRole('dialog')).not.toBeVisible()
   await page.getByRole('button', { name: '동작 흐름', exact: true }).click()
-  await expect(page.getByRole('heading', { name: '눈으로 확인하는 동작 흐름' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '조회 처리 과정' })).toBeVisible()
 })
 
 test('구간 이동과 실행 상태 필터가 조회 결과에 맞게 작동한다', async ({ page }) => {
