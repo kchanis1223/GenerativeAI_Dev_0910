@@ -65,6 +65,27 @@ def test_M02_missing_date_continues_same_request_without_optional_vehicle_count(
     assert other.request_id != second.request_id
 
 
+@pytest.mark.parametrize("departure", ["0600-09-11T06:00:00+09:00", "2026-09-12T06:00:00+09:00"])
+def test_extracted_departure_date_mismatch_stops_before_tools(departure):
+    from badaro.runtime.models import OfflineToolModel
+
+    class Extractor(OfflineExtractor):
+        def extract(self, *args):
+            draft = super().extract(*args)
+            draft.departure_time = datetime.fromisoformat(departure)
+            return draft
+
+    backend = Backend(Settings())
+    backend.orders = Mock(side_effect=AssertionError("조회 실행 금지"))
+    backend.dispatch = Mock(side_effect=AssertionError("배차 실행 금지"))
+    reply = service(extractor=Extractor(), model=OfflineToolModel(), backend=backend).chat(TEXT)
+    assert reply.status == "needs_clarification"
+    assert "배송일과 다릅니다" in reply.message
+    assert reply.model_calls == 1
+    backend.orders.assert_not_called()
+    backend.dispatch.assert_not_called()
+
+
 def test_M03_ambiguous_address_stops_then_resumes_with_confirmed_correction():
     backend = Backend(Settings())
     original = next(iter(backend.fixture()["geocodes"]))

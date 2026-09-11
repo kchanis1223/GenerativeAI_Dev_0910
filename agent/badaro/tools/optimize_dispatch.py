@@ -143,7 +143,7 @@ def execute_optimize_dispatch(
                 f"{exc.error.message} (mappingKey={mapping_key})",
             )
         poll_count += 1
-        if str(data.get("resultCode", "")) != "102":
+        if str(data.get("resultCode", "")) not in {"102", "4013"}:
             return _parse_dispatch_result(
                 data,
                 selected_order_ids,

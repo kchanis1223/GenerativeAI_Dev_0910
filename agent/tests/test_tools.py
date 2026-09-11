@@ -397,7 +397,10 @@ def test_execute_optimize_dispatch_does_not_use_destination_id_as_geocode_key() 
 
 
 @pytest.mark.parametrize("tms_key", [None, "", "separate-tms-key"])
-def test_execute_optimize_dispatch_requests_and_polls_tms(monkeypatch, tms_key) -> None:
+@pytest.mark.parametrize("pending_code", ["102", "4013"])
+def test_execute_optimize_dispatch_requests_and_polls_tms(
+    monkeypatch, tms_key, pending_code,
+) -> None:
     import importlib
 
     module = importlib.import_module("badaro.tools.optimize_dispatch")
@@ -417,6 +420,7 @@ def test_execute_optimize_dispatch_requests_and_polls_tms(monkeypatch, tms_key) 
     responses = iter(
         [
             {"resultCode": "200", "mappingKey": "map-1"},
+            {"resultCode": pending_code},
             {
                 "resultCode": "200",
                 "vehicleList": [{
@@ -466,7 +470,8 @@ def test_execute_optimize_dispatch_requests_and_polls_tms(monkeypatch, tms_key) 
     assert result.routes[0].stops[0].destination_id == "STORE-001"
     assert result.routes[0].distance_meters == 19423
     assert calls[0]["startTime"] == "0500"
-    assert len(calls) == 2
+    assert len(calls) == 3
+    assert calls[1]["mappingKey"] == calls[2]["mappingKey"] == "map-1"
     assert all(call["appKey"] == (tms_key or "test-key") for call in calls)
 
 
@@ -607,12 +612,13 @@ def test_dispatch_rejects_invalid_eta_and_distance(eta, distance):
     assert caught.value.error.code is ToolErrorCode.UPSTREAM_ERROR
 
 
+@pytest.mark.parametrize("pending_code", ["102", "4013"])
 @pytest.mark.parametrize("poll_status,expected_polls,code", [
     (503, 4, ToolErrorCode.UPSTREAM_ERROR),
     (200, 2, ToolErrorCode.TIMEOUT),
 ])
 def test_polling_is_bounded_without_resending_allocation(
-    monkeypatch, poll_status, expected_polls, code,
+    monkeypatch, poll_status, expected_polls, code, pending_code,
 ):
     from importlib import import_module
 
@@ -628,7 +634,7 @@ def test_polling_is_bounded_without_resending_allocation(
         calls.append(url)
         if url.endswith("/allocation"):
             return httpx.Response(200, json={"mappingKey": "test-mapping"})
-        return httpx.Response(poll_status, json={"resultCode": "102"})
+        return httpx.Response(poll_status, json={"resultCode": pending_code})
 
     monkeypatch.setattr(module.httpx, "get", fake_get)
     with pytest.raises(ToolErrorException) as caught:
