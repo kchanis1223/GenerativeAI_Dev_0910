@@ -1,3 +1,4 @@
+import { assertPresentation } from './agent-display'
 export const modeLabels = {
   offline: 'Python 합성 Mock · 제한된 예시 입력',
   llm_mock: 'LLM + Python 합성 Mock',
@@ -18,7 +19,26 @@ export interface AgentResult {
     reason_message: string | null
   }[]
 }
+export interface Presentation {
+  scenario: string
+  source: string
+  orders: {
+    order_id: string
+    destination_id: string
+    address: string
+    weight_kg: number
+    volume_m3: number | null
+    service_seconds: number
+    items: { product_name: string; weight_kg: number }[]
+    coordinate: { lat: number; lon: number } | null
+  }[]
+  vehicle_ids: string[]
+  candidates: string[]
+  audit: { allocation_calls: number; poll_calls: number; communication_retries: number }
+}
 export interface AgentReply {
+  presentation?: Presentation
+  request?: { depot_id: string; delivery_date: string; departure_time: string | null } | null
   thread_id: string
   request_id: string
   mode: AgentMode
@@ -88,14 +108,15 @@ export function parseReply(v: unknown): AgentReply {
       ))
   )
     throw new Error('배차 결과 형식을 확인할 수 없습니다.')
+  if (v.presentation !== undefined) assertPresentation(v.presentation)
   return v as unknown as AgentReply
 }
-export async function agentHealth(): Promise<AgentMode> {
+export async function agentHealth(): Promise<{ mode: AgentMode; scenarios: boolean }> {
   const response = await fetch('/api/agent/health', { signal: AbortSignal.timeout(5000) })
   const data: unknown = await response.json()
   if (!response.ok || !record(data) || data.status !== 'ok' || !isMode(data.mode))
     throw new Error('에이전트 서버 연결을 확인해 주세요.')
-  return data.mode
+  return { mode: data.mode, scenarios: data.scenarios === true }
 }
 export async function sendAgentMessage(message: string, threadId?: string): Promise<AgentReply> {
   const response = await fetch('/api/agent/chat', {

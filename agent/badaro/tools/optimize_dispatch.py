@@ -118,11 +118,22 @@ def execute_optimize_dispatch(
             "TMS 배차 요청이 mappingKey를 반환하지 않았습니다",
         )
 
+    data = poll_dispatch_result(mapping_key, app_key, attempts, interval)
+    return _parse_dispatch_result(
+        data, selected_order_ids, runtime_context,
+        requested_vehicle_ids=vehicle_ids, constraints=constraints,
+    )
+
+
+def poll_dispatch_result(mapping_key, app_key, attempts, interval, *,
+                         request_json=None, sleep=time.sleep):
+    """공통 결과 조회 루프. 시연에서는 외부 호출 없는 응답 함수를 주입한다."""
+    request_json = request_json or _request_json
     poll_count = 0
     retry_count = 0
     while poll_count < attempts:
         try:
-            data = _request_json(
+            data = request_json(
                 "https://apis.openapi.sk.com/tms/allocationData",
                 {"mappingKey": mapping_key, "routeYn": "N", "appKey": app_key},
                 phase="poll",
@@ -134,7 +145,7 @@ def execute_optimize_dispatch(
                 ToolErrorCode.UPSTREAM_ERROR,
             } and retry_count < 3:
                 retry_count += 1
-                time.sleep(interval)
+                sleep(interval)
                 continue
             _raise_context_error(
                 exc.error.code,
@@ -142,15 +153,9 @@ def execute_optimize_dispatch(
             )
         poll_count += 1
         if str(data.get("resultCode", "")) != "102":
-            return _parse_dispatch_result(
-                data,
-                selected_order_ids,
-                runtime_context,
-                requested_vehicle_ids=vehicle_ids,
-                constraints=constraints,
-            )
+            return data
         if poll_count < attempts:
-            time.sleep(interval)
+            sleep(interval)
 
     _raise_context_error(
         ToolErrorCode.TIMEOUT,

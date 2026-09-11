@@ -68,7 +68,7 @@ describe('노량진 CSV 배차', () => {
         latitude: String(last.latitude),
         longitude: String(last.longitude),
       })
-      expect(plan.deliveryDistance).toBeLessThan(yes.vehicleList[index]!.deliveryDistance)
+      expect(plan.deliveryDistance).toBeLessThan(yes.vehicleList[index]!.deliveryDistance!)
     })
   })
 })

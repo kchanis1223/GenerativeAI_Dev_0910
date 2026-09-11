@@ -40,7 +40,18 @@ def create_server(service=None, port=8000):
 
         def do_GET(self):
             if self.path == "/health":
-                self.send_json(200, {"status": "ok", "mode": service.settings.mode})
+                self.send_json(
+                    200,
+                    {
+                        "status": "ok",
+                        "mode": service.settings.mode,
+                        **(
+                            {"scenarios": True}
+                            if type(service).__name__ == "ScenarioService"
+                            else {}
+                        ),
+                    },
+                )
             else:
                 self.send_json(404, {"message": "경로를 찾을 수 없습니다"})
 
@@ -76,8 +87,14 @@ def create_server(service=None, port=8000):
 def main():
     parser = argparse.ArgumentParser(description="바다로 로컬 Agent API")
     parser.add_argument("--port", type=int, default=8000)
+    parser.add_argument("--scenarios", action="store_true", help="M01~M08 고정 시연")
     args = parser.parse_args()
-    with create_server(port=args.port) as server:
+    service = None
+    if args.scenarios:
+        from badaro.scenarios import ScenarioService
+
+        service = ScenarioService()
+    with create_server(service=service, port=args.port) as server:
         print(f"바다로 로컬 API: http://127.0.0.1:{args.port}")
         server.serve_forever()
 

@@ -27,8 +27,8 @@ export interface VehiclePlan {
   vehicleId: string
   vehicleName: string
   deliveryCount: number
-  deliveryTime: number
-  deliveryDistance: number
+  deliveryTime: number | null
+  deliveryDistance: number | null
   deliveryWeight: number
   deliveryVolume: number
   orderList: AssignedOrder[]

@@ -75,10 +75,11 @@ const totals = computed(() =>
     (a, p) => ({
       count: a.count + p.deliveryCount,
       weight: a.weight + p.deliveryWeight,
-      distance: a.distance + p.deliveryDistance,
-      time: a.time + p.deliveryTime,
+      distance:
+        a.distance === null || p.deliveryDistance === null ? null : a.distance + p.deliveryDistance,
+      time: a.time === null || p.deliveryTime === null ? null : a.time + p.deliveryTime,
     }),
-    { count: 0, weight: 0, distance: 0, time: 0 },
+    { count: 0, weight: 0, distance: 0 as number | null, time: 0 as number | null },
   ),
 )
 function toggleOrders() {
@@ -151,9 +152,13 @@ onBeforeUnmount(consoleState.dispose)
 
     <main class="console-grid">
       <aside ref="controlPanel" class="control-panel" aria-label="배송 선택과 배차 결과">
-        <AgentChat />
+        <AgentChat
+          @reply="consoleState.applyAgentReply"
+          @reset="consoleState.clearAgent"
+          @busy="state.agentBusy = $event"
+        />
         <section class="setup-area" aria-label="배차 설정">
-          <fieldset class="setup-fields" :disabled="state.busy">
+          <fieldset class="setup-fields" :disabled="state.busy || state.agentBusy">
             <legend class="sr-only">센터, 차량, 배송정보 선택</legend>
             <div class="selection-grid">
               <section class="selection-panel center-panel" aria-labelledby="center-label">
@@ -293,7 +298,7 @@ onBeforeUnmount(consoleState.dispose)
             <p>센터·차량·배송정보를 확인하고<br />배차를 시작해 주세요.</p>
             <button
               class="primary-button dispatch-button"
-              :disabled="!state.busy && !!issue"
+              :disabled="state.agentBusy || (!state.busy && !!issue)"
               @click="consoleState.run"
             >
               <LoaderCircle v-if="state.busy" class="spin" :size="17" />{{
@@ -370,7 +375,9 @@ onBeforeUnmount(consoleState.dispose)
                       / {{ totals.count }}건
                     </td>
                     <td>{{ duration(totals.time) }}</td>
-                    <td>{{ number(totals.distance / 1000) }}</td>
+                    <td>
+                      {{ totals.distance === null ? '미제공' : number(totals.distance / 1000) }}
+                    </td>
                     <td>{{ number(totals.weight) }}</td>
                     <td>—</td>
                   </tr>
@@ -406,7 +413,13 @@ onBeforeUnmount(consoleState.dispose)
                       {{ plan.deliveryCount }}건
                     </td>
                     <td>{{ duration(plan.deliveryTime) }}</td>
-                    <td>{{ number(plan.deliveryDistance / 1000) }}</td>
+                    <td>
+                      {{
+                        plan.deliveryDistance === null
+                          ? '미제공'
+                          : number(plan.deliveryDistance / 1000)
+                      }}
+                    </td>
                     <td>{{ number(plan.deliveryWeight) }}</td>
                     <td>
                       <span class="capacity-bar"
@@ -520,7 +533,7 @@ onBeforeUnmount(consoleState.dispose)
       <div class="map-column">
         <DeliveryMap
           :center="center"
-          :orders="orders"
+          :orders="state.agentSource ? [] : orders"
           :plans="plans"
           :visible-ids="state.visibleVehicleIds"
           :active-id="state.activeVehicleId"
@@ -529,7 +542,9 @@ onBeforeUnmount(consoleState.dispose)
         />
         <footer class="console-footer">
           <span>BADARO <span>배송을 잇다, 바다로.</span></span
-          ><span>목업 데이터 · 직선 거리와 시속 30km 기준 · 납품 희망시간은 참고용</span>
+          ><span>{{
+            state.agentSource || '목업 데이터 · 직선 거리와 시속 30km 기준 · 납품 희망시간은 참고용'
+          }}</span>
         </footer>
       </div>
     </main>

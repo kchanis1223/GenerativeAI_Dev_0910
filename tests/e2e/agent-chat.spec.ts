@@ -90,7 +90,7 @@ test('Vue에서 Python offline 서버로 재질문과 배차 결과를 받는다
     'Python offline 서버를 실행한 후 AGENT_INTEGRATION=1로 검증',
   )
   const health = await request.get('/api/agent/health')
-  expect(await health.json()).toEqual({ status: 'ok', mode: 'offline' })
+  expect(await health.json()).toMatchObject({ status: 'ok', mode: 'offline' })
   await page.goto('/workspace')
   await expect(page.locator('.chat-status')).toContainText('Python 합성 Mock')
   await page.getByLabel('에이전트 메시지').fill('마포 서대문 은평 배차해줘')

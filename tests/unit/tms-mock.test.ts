@@ -218,7 +218,7 @@ describe('배차 규칙과 비동기 응답', () => {
     }
     const yes = planAllocation(state, selected, now).vehicleList[0]!
     const no = planAllocation(state, { ...selected, centerReturnYn: 'N' }, now).vehicleList[0]!
-    expect(yes.deliveryDistance).toBe(no.deliveryDistance * 2)
+    expect(yes.deliveryDistance).toBe(no.deliveryDistance! * 2)
     expect(yes.endLocation).toEqual(yes.startLocation)
     expect(no.endLocation.latitude).toBe(String(state.orders[0]!.latitude))
   })
