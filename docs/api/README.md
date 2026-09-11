@@ -79,9 +79,11 @@ Accept: application/json
 | `orderIdList` | 조건부 | `allocationType=2`에서 사용할 배송지 ID |
 | `vehicleIdList` | 조건부 | `allocationType=2`에서 사용할 차량 ID |
 | `startTime` | 예 | 배송 시작 희망 시각, `HHmm` |
-| `optionType` | 아니오 | 무게, 부피 또는 배송지 건수 균등 옵션 |
-| `equalizationType` | 아니오 | 거리 또는 시간 균등 옵션 |
-| `centerReturnYn` | 아니오 | 배송 후 센터 복귀 여부 |
+| `optionType` | 아니오 | `1`: 무게 균등, `2`: 부피 균등, `3`: 배송지 건수 균등 |
+| `equalizationType` | 아니오 | `1`: 설정 안 함, `2`: 거리 균등, `3`: 시간 균등 |
+| `centerReturnYn` | 아니오 | `Y`: 배송 후 센터 복귀, `N`: 복귀 안 함 |
+
+위 요청 예시는 무게 균등 배차를 사용하고 거리·시간 균등화는 적용하지 않는다. 옵션 값은 [공식 배차 요청 명세](https://tms-skopenapi.readme.io/reference/배차-요청)를 기준으로 정리했다.
 
 성공 응답의 핵심 필드는 `resultCode`, `resultMessage`, `mappingKey`다. 실제 응답 예시는 [tms-allocation-response.json](./tms-allocation-response.json)을 참고한다.
 
@@ -100,7 +102,7 @@ Accept: application/json
 | 필드 | 필수 | 설명 |
 |---|---|---|
 | `mappingKey` | 예 | 배차 요청 응답에서 받은 키 |
-| `routeYn` | 아니오 | 상세 경로 좌표 포함 여부 |
+| `routeYn` | 아니오 | `Y`: 상세 경로 좌표 포함, `N`: 미포함 |
 
 주요 응답 필드는 다음과 같다.
 
@@ -108,6 +110,16 @@ Accept: application/json
 - 차량: `vehicleId`, `vehicleName`, `deliveryCount`, `deliveryTime`, `deliveryDistance`, `deliveryWeight`
 - 방문지: `orderId`, `orderName`, `address`, `latitude`, `longitude`, `serviceTime`, `expectedArrivalTime`, `expectedDepartureTime`
 
-실제 응답에서는 `vehicleList`가 배열로 반환됐다. 시간 필드는 `yyyyMMddHHmm`, 거리와 시간은 문자열로 반환될 수 있으므로 내부 스키마 변환 시 타입 정규화가 필요하다.
+실제 응답에서는 `vehicleList`가 배열로 반환됐다. 소요 시간·거리 값은 문자열로 반환될 수 있으므로 내부 스키마 변환 시 숫자로 변환하고 아래 단위를 적용한다.
+
+| 필드 | 단위·형식 | 변환 예시 |
+|---|---|---|
+| `deliveryTime` | 초, 예상 주행 시간 | `"4518"` → `4518`초 (75분 18초) |
+| `deliveryDistance` | 미터, 예상 주행 거리 | `"19423"` → `19423`m (19.423km) |
+| `deliveryWeight` | kg | `100` → 100kg |
+| `serviceTime` | 분, 배송지 작업 시간 | `10` → 10분. 내부 모델이 초 단위이면 `600`초로 변환 |
+| `expectedArrivalTime`, `expectedDepartureTime` | `yyyyMMddHHmm` | `202609111139` → 2026-09-11 11:39 |
+
+단위는 [공식 배차 결과 응답 설명](https://tms-skopenapi.readme.io/reference/배차결과요청-샘플예제)을 기준으로 정리했다. `processTime`의 단위는 이번 확인에서 확정하지 않았으므로 주행 시간이나 작업 시간으로 사용하지 않는다.
 
 실제 응답 예시는 [tms-allocation-data-response.json](./tms-allocation-data-response.json)을 참고한다.
