@@ -45,6 +45,20 @@ def execute_optimize_dispatch(
     _validate_runtime_context(order_ids, vehicle_ids, runtime_context)
     if constraints is None:
         _raise_context_error(ToolErrorCode.INVALID_INPUT, "배차 제약조건이 필요합니다")
+    candidate_vehicles = [runtime_context.vehicles[vehicle_id] for vehicle_id in vehicle_ids]
+    for order_id in order_ids:
+        order = runtime_context.orders[order_id]
+        if order.destination_id in constraints.excluded_destination_ids:
+            continue
+        if not any(
+            vehicle.available and order.storage_type in vehicle.supported_storage_types
+            and order.weight_kg <= vehicle.capacity_weight_kg
+            for vehicle in candidate_vehicles
+        ):
+            _raise_context_error(
+                ToolErrorCode.INVALID_INPUT,
+                f"주문에 적합한 차량이 없습니다: {order_id}",
+            )
     load_dotenv()
     app_key = os.getenv("TMAP_APP_KEY", "").strip()
     if not app_key:
@@ -107,13 +121,26 @@ def _parse_dispatch_result(
         _raise_context_error(ToolErrorCode.UPSTREAM_ERROR, "TMS 배차 결과를 받지 못했습니다")
     routes = []
     assigned: set[str] = set()
+    invalid_results: dict[str, str] = {}
     for vehicle in data.get("vehicleList", []):
+        vehicle_id = str(vehicle.get("vehicleId", ""))
+        known_vehicle = context.vehicles.get(vehicle_id)
         stops = []
         for sequence, order in enumerate(vehicle.get("orderList", []), 1):
             order_id = str(order.get("orderId", ""))
             if not order_id:
                 continue
             if order_id not in context.orders:
+                continue
+            order_model = context.orders[order_id]
+            if known_vehicle is None or not known_vehicle.available:
+                invalid_results[order_id] = "TMS가 가용하지 않은 차량에 배정했습니다"
+                continue
+            if order_model.storage_type not in known_vehicle.supported_storage_types:
+                invalid_results[order_id] = "차량이 주문 보관유형을 지원하지 않습니다"
+                continue
+            if order_model.weight_kg > known_vehicle.capacity_weight_kg:
+                invalid_results[order_id] = "차량 적재중량을 초과했습니다"
                 continue
             assigned.add(order_id)
             stops.append({
@@ -123,12 +150,19 @@ def _parse_dispatch_result(
                 "eta": _parse_eta(order.get("expectedArrivalTime")),
             })
         routes.append({
-            "vehicle_id": str(vehicle.get("vehicleId", "")),
+            "vehicle_id": vehicle_id,
             "stops": stops,
             "estimated_duration_seconds": _int_or_none(vehicle.get("deliveryTime")),
             "distance_meters": _int_or_none(vehicle.get("deliveryDistance")),
         })
-    unassigned = [{"order_id": oid} for oid in order_ids if oid not in assigned]
+    unassigned = [
+        {
+            "order_id": oid,
+            **({"reason_message": invalid_results[oid]} if oid in invalid_results else {}),
+        }
+        for oid in order_ids
+        if oid not in assigned
+    ]
     status = "failed" if not assigned else ("success" if not unassigned else "partial")
     return DispatchResult(status=status, routes=routes, unassigned_orders=unassigned)
 
