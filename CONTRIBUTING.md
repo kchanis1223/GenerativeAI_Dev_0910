@@ -20,9 +20,9 @@
 | `agent/badaro/tools/`, `agent/data/`, `docs/tms-api.md`, `docs/api/` | 권유나 |
 | `agent/badaro/middleware/`, `agent/badaro/guardrails/` | 윤소영 |
 | `agent/tests/` | 김강휘 |
-| `agent/badaro/agent.py`, `agent/requirements.txt`, `README.md`, `docs/`(설계서), `.github/` | 김동찬 |
+| `agent/badaro/agent.py`, `agent/requirements.txt`, `agent/pyproject.toml`, `agent/.env.example`, `README.md`, `docs/`(설계서), `.github/` | 김동찬 |
 
-공용 파일(`agent.py`, `requirements.txt`, `README.md`)에 뭔가 추가해야 하면 직접 고치지 말고 PR 본문에 "이 줄 추가해 주세요"로 남긴다.
+공용 파일(`agent.py`, `requirements.txt`, `pyproject.toml`, `.env.example`, `README.md`)에 뭔가 추가해야 하면 직접 고치지 말고 PR 본문에 "이 줄 추가해 주세요"로 남긴다.
 
 ## 3. 작업 순서
 
