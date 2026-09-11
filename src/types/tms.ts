@@ -77,4 +77,6 @@ export interface TmsLog {
 
 export interface MockContext {
   centerId?: string
+  deliveryDate?: string
+  returnToCenter?: boolean
 }

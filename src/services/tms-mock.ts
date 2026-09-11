@@ -305,7 +305,7 @@ export function planAllocation(
   const lines = state.banLines.map((r) => parseLine(text(r, 'lineData')))
   const blocked = (a: Point, b: Point) =>
     lines.some((line) => line.slice(1).some((p, i) => intersects(a, b, line[i]!, p)))
-  const start = new Date(now)
+  const start = context.deliveryDate ? new Date(`${context.deliveryDate}T00:00:00`) : new Date(now)
   start.setHours(
     Number(text(params, 'startTime').slice(0, 2)),
     Number(text(params, 'startTime').slice(2)),
@@ -323,15 +323,25 @@ export function planAllocation(
   }))
   const unassigned: DispatchResult['mock']['unassigned'] = []
   const endPoint = (v: TmsRow, last: Point) =>
-    n(v, 'endLatitude') && n(v, 'endLongitude')
-      ? { latitude: n(v, 'endLatitude'), longitude: n(v, 'endLongitude') }
-      : params.centerReturnYn === 'N'
-        ? last
-        : origin
+    context.returnToCenter !== undefined
+      ? context.returnToCenter
+        ? origin
+        : last
+      : n(v, 'endLatitude') && n(v, 'endLongitude')
+        ? { latitude: n(v, 'endLatitude'), longitude: n(v, 'endLongitude') }
+        : params.centerReturnYn === 'N'
+          ? last
+          : origin
   for (const order of [...orders].sort(
     (a, b) => distanceMeters(origin, point(a)) - distanceMeters(origin, point(b)),
   )) {
-    const typed = planned.filter((p) => p.vehicle.vehicleType === order.vehicleType)
+    const typed = planned.filter(
+      (p) =>
+        p.vehicle.vehicleType === order.vehicleType &&
+        (!order.itemType ||
+          !p.vehicle.supportedItemTypes ||
+          String(p.vehicle.supportedItemTypes).split('|').includes(String(order.itemType))),
+    )
     const zoned = typed.filter(
       (p) => !order.zoneCode || !p.vehicle.zoneCode || p.vehicle.zoneCode === order.zoneCode,
     )
@@ -351,7 +361,7 @@ export function planAllocation(
         orderId: text(order, 'orderId'),
         orderName: text(order, 'orderName'),
         reason: !typed.length
-          ? '동일한 차량 유형이 없습니다.'
+          ? '품목을 운송할 수 있는 차량이 없습니다.'
           : !zoned.length
             ? '동일 권역의 투입 차량이 없습니다.'
             : !capacity.length
@@ -431,7 +441,9 @@ export function planAllocation(
           end,
           end === origin
             ? text(center, 'address')
-            : text(p.vehicle, 'endAddress') || text(p.orders.at(-1)!, 'address'),
+            : end === last
+              ? text(p.orders.at(-1)!, 'address')
+              : text(p.vehicle, 'endAddress') || text(p.orders.at(-1)!, 'address'),
         ),
         routeList: [{ route: points.map((p) => `${p.longitude},${p.latitude}`).join('|') }],
       }

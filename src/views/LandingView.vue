@@ -29,6 +29,24 @@ async function enter(event: MouseEvent) {
     <svg class="wordmark-filter" aria-hidden="true" width="0" height="0">
       <defs>
         <filter
+          id="badaro-outline"
+          x="-15%"
+          y="-25%"
+          width="130%"
+          height="150%"
+          color-interpolation-filters="sRGB"
+        >
+          <feMorphology in="SourceAlpha" operator="dilate" radius="1.25" result="expanded" />
+          <feComposite in="expanded" in2="SourceAlpha" operator="out" result="edge" />
+          <feFlood flood-color="#f0ffff" flood-opacity=".85" />
+          <feComposite in2="edge" operator="in" result="outline" />
+          <feMerge>
+            <feMergeNode in="outline" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+          <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#002e3c" flood-opacity=".8" />
+        </filter>
+        <filter
           id="badaro-ripple"
           x="-15%"
           y="-25%"
@@ -112,13 +130,16 @@ async function enter(event: MouseEvent) {
   flex-direction: column;
   gap: clamp(40px, 6vh, 65px);
   margin-top: 0;
+  max-width: 100%;
+  /* Blend the complete logo with the sea, preserving its light edge and dark shadow. */
+  mix-blend-mode: luminosity;
 }
 .badaro-wordmark {
   display: block;
   margin: 0;
   color: #e5f5f2;
   font-family: var(--font-ui);
-  width: min(760px, 80vw);
+  width: min(1000px, 88vw);
   max-width: 100%;
   font-weight: 400;
   line-height: 1.1;
@@ -128,7 +149,7 @@ async function enter(event: MouseEvent) {
 }
 .badaro-wordmark :deep(.badaro-logo) {
   animation: wordmark-drift 9s ease-in-out infinite;
-  filter: drop-shadow(0 0 1px rgb(230 255 255 / 90%)) drop-shadow(0 3px 12px rgb(226 253 253 / 60%));
+  filter: brightness(1.15) url(#badaro-outline);
 }
 .logo-entry {
   display: block;
@@ -166,12 +187,15 @@ async function enter(event: MouseEvent) {
   }
 }
 @media (max-width: 540px) {
+  .landing {
+    padding-inline: 16px;
+  }
   .landing-content {
     gap: 45px;
     margin-top: 0;
   }
   .badaro-wordmark {
-    width: 88vw;
+    width: min(92vw, calc(100vw - 32px));
   }
 }
 @media (prefers-reduced-motion: reduce) {

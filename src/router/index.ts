@@ -7,45 +7,14 @@ export const router = createRouter({
     { path: '/', name: 'home', component: LandingView },
     {
       path: '/workspace',
-      name: 'dispatch-workflow',
-      component: () => import('../views/DispatchWorkflowView.vue'),
+      name: 'dispatch',
+      component: () => import('../views/DispatchConsoleView.vue'),
     },
-    { path: '/workspace/dispatch', redirect: '/workspace' },
-    {
-      path: '/workspace/:page(centers|flow|history)',
-      name: 'workspace',
-      component: () => import('../views/WorkspaceView.vue'),
-    },
-    {
-      path: '/workspace/:section(vehicles|orders|api)',
-      name: 'logistics',
-      component: () => import('../views/LogisticsView.vue'),
-    },
+    { path: '/workspace/:pathMatch(.*)*', redirect: '/workspace' },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
-  scrollBehavior(_to, _from, savedPosition) {
-    return savedPosition ?? { top: 0 }
-  },
+  scrollBehavior: () => ({ top: 0 }),
 })
-
 router.afterEach((to) => {
-  const labels: Record<string, string> = {
-    vehicles: '차량 정보',
-    orders: '배송지 정보',
-    dispatch: '배차 요청',
-    api: 'API 탐색',
-  }
-  const section =
-    labels[String(to.params.section)] ??
-    (to.params.page === 'flow'
-      ? '동작 흐름'
-      : to.params.page === 'history'
-        ? '실행 기록'
-        : '센터 워크스페이스')
-  document.title =
-    to.name === 'home'
-      ? 'Badaro'
-      : to.name === 'dispatch-workflow'
-        ? '오늘의 배송 준비 · Badaro'
-        : `${section} · Badaro`
+  document.title = to.name === 'home' ? 'Badaro' : '배송 배차 · Badaro'
 })
