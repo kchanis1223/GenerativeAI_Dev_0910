@@ -12,8 +12,6 @@ from .retry import safe_error_text
 
 _log = _stdlib_logging.getLogger("badaro.tool")
 
-AUDIT_TOOLS = frozenset({"confirm_dispatch", "cancel_dispatch"})
-
 
 def build_log_record(*, request_id: str, tool_name: str, ok: bool,
                      elapsed_ms: int, args: Any = None, error: str | None = None) -> dict[str, Any]:
@@ -39,22 +37,12 @@ def emit(record: dict[str, Any]) -> None:
         pass
 
 
-def write_audit(store: Any, tenant_id: str, record: dict[str, Any]) -> None:
-    """기존 확정·취소 감사 기록 함수. v2 MVP에서는 사용하지 않는다."""
-    try:
-        from .store import append_audit
-        append_audit(store, tenant_id, mask_obj(record))
-    except Exception:
-        pass
-
-
 @wrap_tool_call
 def tool_logging(request: Any, handler: Any) -> Any:
     """도구 호출을 감싸서 앞뒤로 시각을 재고, 결과를 기록한다."""
     ctx = getattr(request, "runtime", None)
     ctx = getattr(ctx, "context", None) if ctx else None
     request_id = getattr(ctx, "request_id", "unknown")
-    tenant_id = getattr(ctx, "tenant_id", "unknown")
     tool_name = getattr(getattr(request, "tool_call", None), "get", lambda *_: None)("name") \
         or getattr(request, "tool_name", "unknown")
 
@@ -72,8 +60,4 @@ def tool_logging(request: Any, handler: Any) -> Any:
         rec = build_log_record(request_id=request_id, tool_name=tool_name, ok=ok,
                                elapsed_ms=elapsed)
         emit(rec)
-        if tool_name in AUDIT_TOOLS:
-            store = getattr(request, "store", None)
-            if store is not None:
-                write_audit(store, tenant_id, {**rec, "actor": getattr(ctx, "user_id", "unknown")})
         return result

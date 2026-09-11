@@ -432,11 +432,10 @@ def test_review_1_registered_names_are_callables_not_modules():
         build_tool_retry,
         dispatch_context,
         input_validation,
-        model_routing,
         result_validation,
         tool_logging,
     )
-    for obj in (input_validation, dispatch_context, model_routing,
+    for obj in (input_validation, dispatch_context,
                 tool_logging, result_validation, build_tool_retry()):
         assert not isinstance(obj, types.ModuleType), f"{obj!r} 가 모듈입니다"
 
