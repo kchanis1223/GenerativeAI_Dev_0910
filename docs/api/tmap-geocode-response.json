@@ -1,0 +1,31 @@
+{
+  "coordinateInfo": {
+    "coordType": "WGS84GEO",
+    "addressFlag": "F00",
+    "page": "1",
+    "count": "20",
+    "totalCount": "1",
+    "coordinate": [
+      {
+        "matchFlag": "",
+        "lat": "",
+        "lon": "",
+        "latEntr": "",
+        "lonEntr": "",
+        "city_do": "서울",
+        "gu_gun": "중구",
+        "buildingName": "SK텔레콤빌딩",
+        "newMatchFlag": "N51",
+        "newLat": "37.56649",
+        "newLon": "126.985121",
+        "newLatEntr": "37.566323",
+        "newLonEntr": "126.985204",
+        "newRoadName": "을지로",
+        "newBuildingIndex": "65",
+        "newBuildingName": "SK텔레콤빌딩",
+        "zipcode": "04539",
+        "remainder": ""
+      }
+    ]
+  }
+}
