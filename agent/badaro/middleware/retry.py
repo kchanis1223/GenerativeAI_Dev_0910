@@ -1,51 +1,74 @@
-"""RetryMiddleware — 3.2 (이슈 #13 B-13 · 우선순위 P0)
+"""Retry — 설계서 3.2 / 3.2.1 (이슈 #13)
 
-Hook  : wrap_tool_call (도구 호출을 감싼다)
-목적  : TMAP·TMS 의 '일시적인' 오류만 다시 시도한다.
-v2 보완: ⭐ 4xx(입력 오류)는 재시도 대상에서 제외하고 즉시 입력 수정을 요청한다 (TS-04-C03)
+Tool 은 스스로 재시도하지 않는다. 실행 계층인 #13 이 공통 정책을 적용한다.
+오류는 ToolErrorException.error 의 code·message·retryable 로 전달된다.
 
-왜 4xx 를 빼야 하나:
-  4xx 는 "네가 보낸 값이 틀렸다"는 뜻이다. 같은 값을 세 번 더 보내면 세 번 다 똑같이 거절당한다.
-  그동안 하루 20건 한도만 깎인다. 고쳐야 할 건 요청이지 타이밍이 아니다.
+v1.3 반영
+  - ToolError·ToolErrorCode·ToolErrorException 은 badaro.schemas(B-03)를 그대로 쓴다.
+  - 429 를 제외한 입력·인증 관련 4xx 는 재시도하지 않는다.
+  - 결과 조회 폴링 횟수와 통신 재시도 횟수를 구분한다.
+  - 배차 요청 재전송은 중복 배차 가능성을 먼저 확인한다.
 """
 from __future__ import annotations
 
 from typing import Any
 
+from badaro.schemas import ToolError, ToolErrorCode, ToolErrorException
+
 MAX_RETRIES = 3
 BACKOFF_FACTOR = 2.0
 
-RETRYABLE_STATUS = frozenset({
-    408,
-    425,
-    429,
-    500, 502, 503, 504,
+POLL_MAX_ATTEMPTS = 10
+POLL_INTERVAL_SEC = 3.0
+
+TIMEOUT_STATUS = frozenset({408})
+RATE_LIMIT_STATUS = frozenset({429})
+SERVER_ERROR_STATUS = frozenset({500, 502, 503, 504})
+RETRYABLE_STATUS = TIMEOUT_STATUS | RATE_LIMIT_STATUS | SERVER_ERROR_STATUS
+
+RETRYABLE_CODES = frozenset({
+    ToolErrorCode.TIMEOUT, ToolErrorCode.RATE_LIMITED, ToolErrorCode.UPSTREAM_ERROR,
 })
+
+NON_IDEMPOTENT_TOOLS = frozenset({"optimize_dispatch"})
+
+
+def as_tool_error(exc: Any) -> ToolError | None:
+    """ToolErrorException 또는 ToolError 에서 오류 값을 꺼낸다. 없으면 None."""
+    if isinstance(exc, ToolError):
+        return exc
+    if isinstance(exc, ToolErrorException):
+        err = exc.error
+        return err if isinstance(err, ToolError) else None
+    err = getattr(exc, "error", None)
+    return err if isinstance(err, ToolError) else None
 
 
 def extract_status(exc: BaseException) -> int | None:
-    """예외에서 HTTP 상태코드를 꺼낸다. 라이브러리마다 위치가 달라 순서대로 뒤진다."""
+    """예외에서 HTTP 상태코드를 꺼낸다. 라이브러리마다 위치가 달라 순서대로 확인한다."""
     resp = getattr(exc, "response", None)
-    code = getattr(resp, "status_code", None)
-    if isinstance(code, int):
-        return code
-    code = getattr(exc, "status_code", None)
-    if isinstance(code, int):
-        return code
-    code = getattr(exc, "status", None)
-    if isinstance(code, int):
-        return code
+    for candidate in (getattr(resp, "status_code", None),
+                      getattr(exc, "status_code", None),
+                      getattr(exc, "status", None)):
+        if isinstance(candidate, int):
+            return candidate
     return None
 
 
-def should_retry(exc: BaseException) -> bool:
-    """이 오류를 다시 시도해도 되는가?
+def should_retry(exc: BaseException | ToolError) -> bool:
+    """재시도 대상인가.
 
-    판정 ① 상태코드가 재시도 목록에 있으면 → 예
-          ② 4xx 인데 목록에 없으면 → 아니오 (입력을 고쳐야 함) ⭐ v2 보완
-          ③ 상태코드가 아예 없으면 → 예 (타임아웃·연결 끊김 같은 네트워크 오류)
+    판정 순서
+      1. ToolError 가 있으면 retryable 을 따른다.
+      2. 상태코드가 408·429·5xx 이면 재시도한다.
+      3. 그 외 4xx 는 재시도하지 않는다.
+      4. 상태코드가 없으면 네트워크 오류로 보고 재시도한다.
     """
-    code = extract_status(exc)
+    err = as_tool_error(exc)
+    if err is not None:
+        return err.retryable
+
+    code = extract_status(exc) if isinstance(exc, BaseException) else None
     if code is None:
         return True
     if code in RETRYABLE_STATUS:
@@ -55,25 +78,53 @@ def should_retry(exc: BaseException) -> bool:
     return code >= 500
 
 
+def default_retryable(code: ToolErrorCode) -> bool:
+    """ToolError.code 만으로 판단해야 할 때 쓰는 기본 정책."""
+    return ToolErrorCode(code) in RETRYABLE_CODES
+
+
 def backoff_delay(attempt: int) -> float:
-    """attempt 번째 재시도 전에 몇 초 쉴지. 1회차 1초, 2회차 2초, 3회차 4초."""
+    """attempt 번째 재시도 전 대기 시간. 1초 → 2초 → 4초."""
     return BACKOFF_FACTOR ** (attempt - 1)
 
 
-def retry_hint(exc: BaseException) -> str:
-    """재시도를 포기했을 때 사용자에게 돌려줄 안내문. 값을 만들어내지 않고 사유만 말한다 (G-04)."""
-    code = extract_status(exc)
+def requires_duplicate_check(tool_name: str) -> bool:
+    """재전송 전에 중복 실행 여부를 먼저 확인해야 하는 Tool 인가."""
+    return tool_name in NON_IDEMPOTENT_TOOLS
+
+
+def can_resend(tool_name: str, *, prior_result_found: bool) -> bool:
+    """다시 보내도 되는가. 중복 배차는 되돌릴 수 없으므로 확인되면 보내지 않는다."""
+    if not requires_duplicate_check(tool_name):
+        return True
+    return not prior_result_found
+
+
+def retry_hint(exc: BaseException | ToolError) -> str:
+    """재시도를 포기했을 때의 안내문. 원본 키·주소·전화번호를 포함하지 않는다."""
+    err = as_tool_error(exc)
+    if err is not None:
+        if err.code is ToolErrorCode.RATE_LIMITED:
+            return f"외부 API 호출량 한도에 걸렸습니다. {MAX_RETRIES}회 재시도했으나 실패했습니다."
+        if not err.retryable:
+            return (f"요청을 진행할 수 없습니다 ({err.code}). "
+                    f"같은 값으로는 다시 시도하지 않았습니다. 입력이나 조건을 확인해 주세요.")
+        return (f"외부 API 호출이 {MAX_RETRIES}회 재시도 후에도 실패했습니다 ({err.code}). "
+                f"결과를 임의로 생성하지 않았습니다.")
+
+    code = extract_status(exc) if isinstance(exc, BaseException) else None
+    if code in RATE_LIMIT_STATUS:
+        return f"외부 API 호출량 한도에 걸렸습니다. {MAX_RETRIES}회 재시도했으나 실패했습니다."
     if code is not None and 400 <= code < 500 and code not in RETRYABLE_STATUS:
         return (f"요청 값에 문제가 있어 외부 API가 거절했습니다 (HTTP {code}). "
                 f"같은 값으로는 다시 시도하지 않았습니다. 입력을 확인해 주세요.")
-    if code == 429:
-        return "외부 API 호출량 한도에 걸렸습니다. 3회 재시도했으나 실패했습니다."
-    return (f"외부 API 호출이 {MAX_RETRIES}회 재시도 후에도 실패했습니다"
-            f"{f' (HTTP {code})' if code else ''}. 결과를 임의로 생성하지 않았습니다.")
+    suffix = f" (HTTP {code})" if code else ""
+    return (f"외부 API 호출이 {MAX_RETRIES}회 재시도 후에도 실패했습니다{suffix}. "
+            f"결과를 임의로 생성하지 않았습니다.")
 
 
 def build_tool_retry() -> Any:
-    """내장 ToolRetryMiddleware 를 4xx 제외 설정으로 만든다. 없으면 None (agent.py 가 알아서 건너뜀)."""
+    """내장 ToolRetryMiddleware 를 구성한다. langchain 미설치 시 None."""
     try:
         from langchain.agents.middleware import ToolRetryMiddleware
     except ImportError:
