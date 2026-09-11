@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+import math
 import os
-import time
 from typing import Any
 
 import httpx
@@ -53,7 +53,7 @@ def geocode_address(address: str) -> GeocodeResult:
         "fullAddr": normalized_address,
         "appKey": app_key,
     }
-    response = _request_with_retry(params)
+    response = _request_once(params)
     result = _parse_response(normalized_address, response)
     _CACHE[normalized_address] = result
     return result
@@ -65,70 +65,74 @@ def clear_geocode_cache() -> None:
     _CACHE.clear()
 
 
-def _request_with_retry(params: dict[str, str]) -> dict[str, Any]:
-    max_retries = max(0, int(os.getenv("TOOL_MAX_RETRIES", "3")))
-    for attempt in range(max_retries + 1):
-        try:
-            response = httpx.get(TMAP_GEOCODE_URL, params=params, timeout=10.0)
-        except httpx.TimeoutException as exc:
-            if attempt < max_retries:
-                time.sleep(min(2**attempt, 4))
-                continue
-            _raise_error(
-                ToolErrorCode.TIMEOUT, "TMAP 지오코딩 요청 시간이 초과되었습니다", retryable=True
-            )
-            raise AssertionError("unreachable") from exc
-        except httpx.HTTPError as exc:
-            _raise_error(
-                ToolErrorCode.UPSTREAM_ERROR,
-                f"TMAP 지오코딩 요청에 실패했습니다: {exc}",
-                retryable=True,
-            )
-
-        if response.status_code == 429 or response.status_code >= 500:
-            if attempt < max_retries:
-                time.sleep(min(2**attempt, 4))
-                continue
-            code = (
-                ToolErrorCode.RATE_LIMITED
-                if response.status_code == 429
-                else ToolErrorCode.UPSTREAM_ERROR
-            )
-            _raise_error(code, f"TMAP 지오코딩 서버 오류 ({response.status_code})", retryable=True)
-        if response.status_code in (401, 403):
-            _raise_error(
-                ToolErrorCode.UNAUTHORIZED, "TMAP 앱키가 유효하지 않습니다", retryable=False
-            )
-        if response.status_code >= 400:
-            _raise_error(
-                ToolErrorCode.UPSTREAM_ERROR,
-                f"TMAP 지오코딩 요청 오류 ({response.status_code})",
-                retryable=False,
-            )
-        try:
-            return response.json()
-        except ValueError as exc:
-            _raise_error(
-                ToolErrorCode.UPSTREAM_ERROR, "TMAP 응답이 올바른 JSON이 아닙니다", retryable=False
-            )
-            raise AssertionError("unreachable") from exc
-    raise AssertionError("unreachable")
+def _request_once(params: dict[str, str]) -> dict[str, Any]:
+    """단일 HTTP 호출. 재시도는 공통 실행 계층(#13)이 담당한다."""
+    try:
+        response = httpx.get(TMAP_GEOCODE_URL, params=params, timeout=10.0)
+    except httpx.TimeoutException as exc:
+        _raise_error(ToolErrorCode.TIMEOUT, "TMAP 지오코딩 요청 시간이 초과되었습니다", True)
+        raise AssertionError("unreachable") from exc
+    except httpx.HTTPError as exc:
+        _raise_error(
+            ToolErrorCode.UPSTREAM_ERROR, f"TMAP 지오코딩 요청에 실패했습니다: {exc}", True
+        )
+    if response.status_code == 429:
+        _raise_error(ToolErrorCode.RATE_LIMITED, "TMAP 지오코딩 호출 한도를 초과했습니다", True)
+    if response.status_code >= 500:
+        _raise_error(
+            ToolErrorCode.UPSTREAM_ERROR,
+            f"TMAP 지오코딩 서버 오류 ({response.status_code})",
+            True,
+        )
+    if response.status_code in (401, 403):
+        _raise_error(ToolErrorCode.UNAUTHORIZED, "TMAP 앱키가 유효하지 않습니다", False)
+    if response.status_code >= 400:
+        _raise_error(
+            ToolErrorCode.UPSTREAM_ERROR,
+            f"TMAP 지오코딩 요청 오류 ({response.status_code})",
+            False,
+        )
+    try:
+        payload = response.json()
+    except ValueError as exc:
+        _raise_error(ToolErrorCode.UPSTREAM_ERROR, "TMAP 응답이 올바른 JSON이 아닙니다", False)
+        raise AssertionError("unreachable") from exc
+    if not isinstance(payload, dict):
+        _raise_error(ToolErrorCode.UPSTREAM_ERROR, "TMAP 응답 구조가 올바르지 않습니다", False)
+    return payload
 
 
 def _parse_response(input_address: str, payload: dict[str, Any]) -> GeocodeResult:
-    info = payload.get("coordinateInfo") or {}
-    raw_coordinates = info.get("coordinate") or []
-    if not raw_coordinates or str(info.get("totalCount", "0")) == "0":
+    info = payload.get("coordinateInfo")
+    if not isinstance(info, dict):
+        _raise_error(ToolErrorCode.UPSTREAM_ERROR, "TMAP 응답에 coordinateInfo가 없습니다", False)
+    raw_coordinates = info.get("coordinate")
+    total_count = str(info.get("totalCount", "")).strip()
+    if total_count == "0" and (raw_coordinates is None or raw_coordinates == []):
         return GeocodeResult(
             status=GeocodeStatus.NOT_FOUND, input_address=input_address, candidates=[]
         )
+    if not isinstance(raw_coordinates, list):
+        _raise_error(ToolErrorCode.UPSTREAM_ERROR, "TMAP coordinate가 배열이 아닙니다", False)
 
     candidates: list[GeocodeCandidate] = []
+    exact_candidates: list[GeocodeCandidate] = []
     for item in raw_coordinates:
+        if not isinstance(item, dict):
+            _raise_error(
+                ToolErrorCode.UPSTREAM_ERROR,
+                "TMAP 좌표 항목 구조가 올바르지 않습니다",
+                False,
+            )
         lat = item.get("newLat") or item.get("lat")
         lon = item.get("newLon") or item.get("lon")
-        if not lat or not lon:
-            continue
+        try:
+            lat_value, lon_value = float(lat), float(lon)
+        except (TypeError, ValueError) as exc:
+            _raise_error(ToolErrorCode.UPSTREAM_ERROR, "TMAP 좌표 값이 숫자가 아닙니다", False)
+            raise AssertionError("unreachable") from exc
+        if not math.isfinite(lat_value) or not math.isfinite(lon_value):
+            _raise_error(ToolErrorCode.UPSTREAM_ERROR, "TMAP 좌표 값이 유효하지 않습니다", False)
         matched_address = (
             " ".join(
                 str(item.get(key, "")).strip()
@@ -144,10 +148,14 @@ def _parse_response(input_address: str, payload: dict[str, Any]) -> GeocodeResul
             or input_address
         )
         candidates.append(
-            GeocodeCandidate(matched_address=matched_address, lat=float(lat), lon=float(lon))
+            GeocodeCandidate(matched_address=matched_address, lat=lat_value, lon=lon_value)
         )
+        if item.get("newMatchFlag") == "N51" or item.get("matchFlag") == "Y":
+            exact_candidates.append(candidates[-1])
 
-    status = GeocodeStatus.OK if len(candidates) == 1 else GeocodeStatus.AMBIGUOUS
+    if not candidates:
+        _raise_error(ToolErrorCode.UPSTREAM_ERROR, "TMAP 응답에 유효한 좌표가 없습니다", False)
+    status = GeocodeStatus.OK if len(exact_candidates) == 1 else GeocodeStatus.AMBIGUOUS
     return GeocodeResult(status=status, input_address=input_address, candidates=candidates)
 
 
