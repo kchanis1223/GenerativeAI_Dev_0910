@@ -24,7 +24,9 @@ CLOCK_RE = re.compile(r"\b([01]?\d|2[0-3]):([0-5]\d)\b")
 DURATION_RE = re.compile(r"\d+\s*분\s*(소요|후|뒤)")
 COMPLETE_RE = re.compile(r"(전체|모두|전부|다)\s*(배정|완료|처리)|빠짐없이")
 GUARANTEE_RE = re.compile(r"(보장|확실|반드시|틀림없)")
-CONFIRMED_RE = re.compile(r"(확정(했|됐|되었|입니다|합니다))|배차\s*완료|기사(님)?(에게|께)\s*(전달|배포)")
+CONFIRMED_RE = re.compile(
+    r"(확정(했|됐|되었|입니다|합니다))|배차\s*완료|기사(님)?(에게|께)\s*(전달|배포)"
+)
 HEDGE_RE = re.compile(r"사전검증|TMS\s*미보장|미보장|정보\s*없음")
 PENDING_RE = re.compile(r"(승인\s*대기|확정\s*전|아직\s*확정)")
 
@@ -156,7 +158,8 @@ def validate_response(text: str, *, tms_result: Any,
     if result.get("status") in ("partial", "failed") and claims_complete:
         v.append({"criterion": "dispatch_result_status", "status": result.get("status"),
                   "action": "state_partial_result",
-                  "message": f"DispatchResult.status 가 {result['status']} 인데 전체 완료로 서술했습니다."})
+                  "message": f"DispatchResult.status 가 {result['status']} 인데 "
+                             f"전체 완료로 서술했습니다."})
 
     if "constraint_warnings" in state:
         if GUARANTEE_RE.search(text) and not HEDGE_RE.search(text):

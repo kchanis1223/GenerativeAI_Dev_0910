@@ -18,9 +18,11 @@ _RULES: tuple[tuple[re.Pattern[str], str], ...] = (
      "override_instruction"),
     (re.compile(r"(?i)ignore\s+(all\s+)?(previous|prior|above)\s+(instruction|prompt|rule)"),
      "override_instruction"),
-    (re.compile(r"(너의|네)\s*(규칙|지침|역할)\w*\s*(을|를)?\s*(바꿔|해제|잊)"), "override_instruction"),
+    (re.compile(r"(너의|네)\s*(규칙|지침|역할)\w*\s*(을|를)?\s*(바꿔|해제|잊)"),
+     "override_instruction"),
 
-    (re.compile(r"(시스템\s*프롬프트|system\s*prompt|초기\s*지침)\w*\s*(을|를)?\s*(보여|출력|알려|말해)"),
+    (re.compile(r"(시스템\s*프롬프트|system\s*prompt|초기\s*지침)\w*\s*(을|를)?"
+                r"\s*(보여|출력|알려|말해)"),
      "prompt_exfiltration"),
     (re.compile(r"(?i)(reveal|show|print|repeat)\s+(your\s+)?(system\s+)?(prompt|instruction)"),
      "prompt_exfiltration"),

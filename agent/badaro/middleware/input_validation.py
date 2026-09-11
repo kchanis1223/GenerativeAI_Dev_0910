@@ -73,10 +73,12 @@ def validate_dispatch_input(payload: dict[str, Any], *,
     dests = payload.get("destination_ids")
     if dests is not None:
         if not isinstance(dests, list):
-            issues.append(_issue("destination_ids", "bad_type", "배송지 목록 형식이 올바르지 않습니다."))
+            issues.append(_issue("destination_ids", "bad_type",
+                                 "배송지 목록 형식이 올바르지 않습니다."))
         elif len(dests) == 0:
             issues.append(_issue("destination_ids", "empty",
-                                 "배송지를 지정하지 않으려면 값을 비우고, 지정하려면 지점을 알려주세요."))
+                                 "배송지를 지정하지 않으려면 값을 비우고, "
+                                 "지정하려면 지점을 알려주세요."))
         elif len(dests) > MAX_DESTINATIONS:
             issues.append(_issue("destination_ids", "too_many",
                                  f"배송지가 {len(dests)}건입니다. 상한 {MAX_DESTINATIONS}건이라 "

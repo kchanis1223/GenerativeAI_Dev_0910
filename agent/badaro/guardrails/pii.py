@@ -48,7 +48,10 @@ def mask_secrets(text: str) -> str:
 
 
 def mask_text(text: str) -> str:
-    """문자열 하나를 전부 마스킹한다. 순서 중요: 키를 먼저 지워야 키 안의 숫자를 전화번호로 오인하지 않는다."""
+    """문자열 하나를 전부 마스킹한다.
+
+    순서가 중요하다. 키를 먼저 지워야 키 안의 숫자를 전화번호로 오인하지 않는다.
+    """
     if not isinstance(text, str):
         return text
     out = mask_secrets(text)
@@ -58,7 +61,10 @@ def mask_text(text: str) -> str:
 
 
 def mask_obj(obj: Any, _depth: int = 0) -> Any:
-    """dict·list 를 재귀로 훑으며 안쪽 문자열까지 전부 마스킹한다. 로그 기록 직전에 통째로 통과시킨다."""
+    """dict·list 를 재귀로 훑으며 안쪽 문자열까지 마스킹한다.
+
+    로그 기록 직전에 통째로 통과시킨다.
+    """
     if _depth > 10:
         return MASK
     if isinstance(obj, str):
