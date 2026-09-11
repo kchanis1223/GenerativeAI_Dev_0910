@@ -21,7 +21,7 @@ UTF-8 BOM·쉼표 구분 CSV입니다. `vehicleType`과 `openTime`·`closeTime`�
 
 원본은 기존 Vue/TMS 필드명을 유지합니다. Python 모델에 CSV 행을 그대로 전달하면
 검증에 실패합니다. [호환성·주소 검증 결과](validation-report.md)의 필드 매핑이 필요합니다.
-PR #29의 `Order`·`Vehicle` 모델을 고정 커밋에서 가져와 변환한 40건·5대를 검증합니다.
+PR #29가 병합된 main의 `Order`·`Vehicle` 모델을 고정 커밋에서 가져와 변환한 40건·5대를 검증합니다.
 `get_delivery_orders`와 `get_available_vehicles`의 조회 로직 연결은 #10의 범위입니다.
 
 - 주문 `priority=normal`을 명시했습니다. 차량 근무시간은 샘플 가정인
