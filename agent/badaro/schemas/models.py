@@ -3,7 +3,7 @@
 from datetime import date, datetime
 from enum import StrEnum
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class StorageType(StrEnum):
@@ -45,51 +45,75 @@ class ToolErrorCode(StrEnum):
 class DispatchRequest(BaseModel):
     """LLM이 사용자 배송 요청에서 추출하는 구조화된 입력."""
 
-    depot_id: str
-    destination_ids: list[str] | None = None
-    delivery_date: date
-    departure_time: datetime | None = None
-    vehicle_count: int | None = Field(default=None, ge=1)
-    excluded_destination_ids: list[str] = Field(default_factory=list)
-    excluded_vehicle_ids: list[str] = Field(default_factory=list)
-    product_names: list[str] | None = None
-    deadline: datetime | None = None
-    priority: Priority = Priority.NORMAL
-    storage_types: list[StorageType] | None = None
+    depot_id: str = Field(description="출발 물류센터 ID")
+    destination_ids: list[str] | None = Field(
+        default=None, description="배송 대상 지점 ID 목록. None이면 해당 배송일 전체 주문"
+    )
+    delivery_date: date = Field(description="배송 대상일")
+    departure_time: datetime | None = Field(default=None, description="출발 예정 시각")
+    vehicle_count: int | None = Field(default=None, ge=1, description="사용할 차량 수")
+    excluded_destination_ids: list[str] = Field(
+        default_factory=list, description="배차에서 제외할 지점 ID 목록"
+    )
+    excluded_vehicle_ids: list[str] = Field(
+        default_factory=list, description="배차에서 제외할 차량 ID 목록"
+    )
+    product_names: list[str] | None = Field(
+        default=None, description="주문 조회를 좁히는 상품명 조건"
+    )
+    deadline: datetime | None = Field(default=None, description="납품 마감 시각")
+    priority: Priority = Field(default=Priority.NORMAL, description="배송 우선순위")
+    storage_types: list[StorageType] | None = Field(default=None, description="필요한 보관 조건")
 
 
 class OrderItem(BaseModel):
-    product_name: str
-    weight_kg: float = Field(ge=0)
+    product_name: str = Field(description="상품명")
+    weight_kg: float = Field(ge=0, description="상품 중량(kg)")
 
 
 class Order(BaseModel):
-    order_id: str
-    destination_id: str
-    address: str
-    items: list[OrderItem]
-    weight_kg: float = Field(ge=0)
-    volume_m3: float | None = Field(default=None, ge=0)
-    storage_type: StorageType
-    priority: Priority
-    deadline: datetime | None = None
-    service_seconds: int = Field(ge=0)
+    order_id: str = Field(description="주문 ID")
+    destination_id: str = Field(description="배송 지점 ID")
+    address: str = Field(description="배송 지점 주소")
+    items: list[OrderItem] = Field(description="주문 상품 목록")
+    weight_kg: float = Field(ge=0, description="주문 총중량(kg)")
+    volume_m3: float | None = Field(default=None, ge=0, description="주문 총부피(m3)")
+    storage_type: StorageType = Field(description="주문 보관 유형")
+    priority: Priority = Field(description="주문 우선순위")
+    deadline: datetime | None = Field(default=None, description="지점별 납품 마감 시각")
+    service_seconds: int = Field(ge=0, description="하역 소요시간(초)")
 
 
 class Vehicle(BaseModel):
-    vehicle_id: str
-    capacity_weight_kg: float = Field(ge=0)
-    capacity_volume_m3: float | None = Field(default=None, ge=0)
-    supported_storage_types: list[StorageType]
-    available: bool
-    shift_start: datetime
-    shift_end: datetime
+    vehicle_id: str = Field(description="차량 ID")
+    capacity_weight_kg: float = Field(ge=0, description="최대 적재 중량(kg)")
+    capacity_volume_m3: float | None = Field(default=None, ge=0, description="최대 적재 부피(m3)")
+    supported_storage_types: list[StorageType] = Field(description="적재 가능한 보관 유형")
+    available: bool = Field(description="해당 배송일 운행 가능 여부")
+    shift_start: datetime = Field(description="운행 가능 시작 시각")
+    shift_end: datetime = Field(description="운행 가능 종료 시각")
+
+    @model_validator(mode="after")
+    def validate_shift(self) -> "Vehicle":
+        start_is_timezone_aware = (
+            self.shift_start.tzinfo is not None and self.shift_start.utcoffset() is not None
+        )
+        end_is_timezone_aware = (
+            self.shift_end.tzinfo is not None and self.shift_end.utcoffset() is not None
+        )
+        if start_is_timezone_aware != end_is_timezone_aware:
+            raise ValueError(
+                "shift_start and shift_end must both include a timezone or both omit it"
+            )
+        if self.shift_end < self.shift_start:
+            raise ValueError("shift_end must be greater than or equal to shift_start")
+        return self
 
 
 class GeocodeCandidate(BaseModel):
-    matched_address: str
-    lat: float
-    lon: float
+    matched_address: str = Field(description="매칭된 주소")
+    lat: float = Field(description="위도(WGS84)")
+    lon: float = Field(description="경도(WGS84)")
 
     @field_validator("lat")
     @classmethod
@@ -107,9 +131,20 @@ class GeocodeCandidate(BaseModel):
 
 
 class GeocodeResult(BaseModel):
-    status: GeocodeStatus
-    input_address: str
-    candidates: list[GeocodeCandidate]
+    status: GeocodeStatus = Field(description="지오코딩 상태")
+    input_address: str = Field(description="조회 요청 주소")
+    candidates: list[GeocodeCandidate] = Field(description="조회된 주소 후보 목록")
+
+    @model_validator(mode="after")
+    def validate_candidates_for_status(self) -> "GeocodeResult":
+        candidate_count = len(self.candidates)
+        if self.status is GeocodeStatus.OK and candidate_count != 1:
+            raise ValueError("status=ok requires exactly one candidate")
+        if self.status is GeocodeStatus.NOT_FOUND and candidate_count != 0:
+            raise ValueError("status=not_found requires no candidates")
+        if self.status is GeocodeStatus.AMBIGUOUS and candidate_count < 1:
+            raise ValueError("status=ambiguous requires at least one candidate")
+        return self
 
 
 class DispatchRuntimeContext(BaseModel):
@@ -129,37 +164,41 @@ class DispatchRuntimeContext(BaseModel):
 
 
 class DispatchConstraints(BaseModel):
-    priority: Priority
-    deadline: datetime | None = None
-    storage_types: list[StorageType] | None = None
-    departure_time: datetime | None = None
-    excluded_destination_ids: list[str] = Field(default_factory=list)
+    priority: Priority = Field(description="배송 우선순위")
+    deadline: datetime | None = Field(default=None, description="납품 마감 시각")
+    storage_types: list[StorageType] | None = Field(default=None, description="필요한 보관 조건")
+    departure_time: datetime | None = Field(default=None, description="출발 예정 시각")
+    excluded_destination_ids: list[str] = Field(
+        default_factory=list, description="배차에서 제외할 지점 ID 목록"
+    )
 
 
 class Stop(BaseModel):
-    sequence: int = Field(ge=1)
-    order_id: str
-    destination_id: str
-    eta: datetime | None = None
+    sequence: int = Field(ge=1, description="방문 순서")
+    order_id: str = Field(description="주문 ID")
+    destination_id: str = Field(description="배송 지점 ID")
+    eta: datetime | None = Field(default=None, description="도착 예정 시각")
 
 
 class VehicleRoute(BaseModel):
-    vehicle_id: str
-    stops: list[Stop]
-    estimated_duration_seconds: int | None = Field(default=None, ge=0)
-    distance_meters: int | None = Field(default=None, ge=0)
+    vehicle_id: str = Field(description="배정된 차량 ID")
+    stops: list[Stop] = Field(description="TMAP/TMS가 반환한 방문 순서")
+    estimated_duration_seconds: int | None = Field(
+        default=None, ge=0, description="예상 소요시간(초)"
+    )
+    distance_meters: int | None = Field(default=None, ge=0, description="예상 이동거리(m)")
 
 
 class UnassignedOrder(BaseModel):
-    order_id: str
-    reason_code: str | None = None
-    reason_message: str | None = None
+    order_id: str = Field(description="미배정 주문 ID")
+    reason_code: str | None = Field(default=None, description="미배정 사유 코드")
+    reason_message: str | None = Field(default=None, description="미배정 사유 설명")
 
 
 class DispatchResult(BaseModel):
-    status: DispatchStatus
-    routes: list[VehicleRoute]
-    unassigned_orders: list[UnassignedOrder]
+    status: DispatchStatus = Field(description="배차 처리 상태")
+    routes: list[VehicleRoute] = Field(description="차량별 배정 및 방문 순서")
+    unassigned_orders: list[UnassignedOrder] = Field(description="미배정 주문 목록")
 
 
 class ToolError(BaseModel):
@@ -169,9 +208,9 @@ class ToolError(BaseModel):
     기준으로 판단한다. 개별 Tool은 재시도 자체를 수행하지 않는다.
     """
 
-    code: ToolErrorCode
-    message: str
-    retryable: bool
+    code: ToolErrorCode = Field(description="오류 유형")
+    message: str = Field(description="사용자 안내용 오류 설명")
+    retryable: bool = Field(description="실행 계층에서 재시도할 수 있는지 여부")
 
 
 class ToolErrorException(Exception):
