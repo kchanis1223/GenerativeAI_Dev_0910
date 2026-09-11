@@ -58,5 +58,13 @@ export default defineConfig(({ mode }) => {
   const agentEnv = loadEnv(mode, `${process.cwd()}/agent`, 'TMAP_')
   return {
     plugins: [vue(), centerApiProxy(env.TMAP_APP_KEY || agentEnv.TMAP_APP_KEY || '')],
+    server: {
+      proxy: {
+        '/api/agent': {
+          target: 'http://127.0.0.1:8000',
+          rewrite: (path) => path.replace(/^\/api\/agent/, '').replace(/^\/chat$/, '/api/chat'),
+        },
+      },
+    },
   }
 })

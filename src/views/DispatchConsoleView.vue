@@ -151,11 +151,7 @@ onBeforeUnmount(consoleState.dispose)
 
     <main class="console-grid">
       <aside ref="controlPanel" class="control-panel" aria-label="배송 선택과 배차 결과">
-        <AgentChat
-          :center-name="String(center?.centerName ?? '센터 미선택')"
-          :vehicle-count="vehicles.length"
-          :order-count="orders.length"
-        />
+        <AgentChat />
         <section class="setup-area" aria-label="배차 설정">
           <fieldset class="setup-fields" :disabled="state.busy">
             <legend class="sr-only">센터, 차량, 배송정보 선택</legend>

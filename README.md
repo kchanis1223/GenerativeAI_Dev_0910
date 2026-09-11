@@ -26,10 +26,9 @@ LLM은 요청 해석·구조화와 Tool 선택을 수행합니다. 검증된 배
 
 | 구성                          | 위치     | 설명                                                                            |
 | ----------------------------- | -------- | ------------------------------------------------------------------------------- |
-| 에이전트 (Python · LangChain) | `agent/` | LangChain Tool 통합, 요청별 State, 로컬 JSON API                      |
+| 에이전트 (Python · LangChain) | `agent/` | LangChain Tool 통합, 요청별 State, 로컬 JSON API                                |
 | 화면 (Vue 3 · Vite)           | `src/`   | 센터·차량·주문 선택, 배차 진행 모달·결과, Leaflet 배송 지도. TMS 목업 내장      |
 | 문서                          | `docs/`  | 설계서, [TMS API 명세 정리](docs/tms-api.md), [프론트 가이드](docs/frontend.md) |
-
 
 ## 실행
 
@@ -59,6 +58,10 @@ USE_MOCK=1 python -m pytest
 USE_MOCK=1 MODEL_MODE=offline python -m badaro.agent '2026-09-11 마포 서대문 은평 배차해줘'
 USE_MOCK=1 MODEL_MODE=offline python -m badaro.server --port 8000
 ```
+
+Python 서버를 켠 상태에서 루트의 `npm run dev`로 화면을 실행하고 본사물류운영자로 진입합니다. 채팅에 `마포 서대문 은평 배차해줘`를 입력한 뒤 배송일 질문에 `2026-09-11`로 답하면 Python 배차 결과를 표시합니다. Vite는 `/api/agent`를 로컬 Python 서버의 8000 포트로 전달합니다. 이 프록시는 개발 서버용이며 정적 배포에는 별도 서버 구성이 필요합니다.
+
+채팅의 실행 모드는 Python 서버 응답을 표시합니다. 아래 프론트 목업의 선택값·결과·지도는 채팅과 연결되지 않습니다. 새 요청은 ‘새 대화’로 시작하며, 응답이 유실되면 실행 여부를 확인하기 전 재전송하지 마세요. 재배차·기사 권한 검증은 현재 서버 범위에 포함되지 않습니다.
 
 `offline`은 제한된 입력 예시를 처리하는 대체 모델이며 실제 LLM이 아닙니다. 합성 배차 응답에는 ETA·거리가 없고 이를 임의로 채우지 않습니다. 설정·OpenAI 모드·API 응답 형식은 [Agent 실행 안내](docs/agent-integration.md)를 참고하세요.
 

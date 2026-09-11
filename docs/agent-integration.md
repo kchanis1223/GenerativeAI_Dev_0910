@@ -18,11 +18,11 @@ USE_MOCK=1 MODEL_MODE=offline python -m badaro.agent
 
 ## 실행 모드
 
-| MODEL_MODE | USE_MOCK | 동작 |
-|---|---|---|
-| offline | 1 | 외부 호출 없이 시연용 입력 해석과 LangChain Tool 흐름 실행 |
-| openai | 1 | 같은 OpenAI 모델로 조건 추출·Tool 선택, 배차는 합성 Mock |
-| openai | 0 | OpenAI와 실제 TMAP·TMS Tool 호출 |
+| MODEL_MODE | USE_MOCK | 동작                                                       |
+| ---------- | -------- | ---------------------------------------------------------- |
+| offline    | 1        | 외부 호출 없이 시연용 입력 해석과 LangChain Tool 흐름 실행 |
+| openai     | 1        | 같은 OpenAI 모델로 조건 추출·Tool 선택, 배차는 합성 Mock   |
+| openai     | 0        | OpenAI와 실제 TMAP·TMS Tool 호출                           |
 
 OpenAI 모드는 서버에 `OPENAI_API_KEY`와 사용 가능한 `MAIN_MODEL`을 설정해야 한다. 모델명은 임의로 확정하지 않는다. `USE_MOCK`는 TMAP·TMS 전환이며 OpenAI 요금 발생 여부를 결정하지 않는다. `MODEL_MODE=offline`만 모든 외부 모델 호출을 생략한다.
 
@@ -44,18 +44,18 @@ OpenAI 모드는 서버에 `OPENAI_API_KEY`와 사용 가능한 `MAIN_MODEL`을 
 USE_MOCK=1 MODEL_MODE=offline python -m badaro.server --port 8000
 ```
 
-서버는 `127.0.0.1`에만 바인딩한다. 운영 인증 서버가 아니라 로컬 시연용이다. Vue 개발 서버의 `http://localhost:5173`과 `http://127.0.0.1:5173`만 CORS를 허용한다. 기존 Vue 화면에 버튼과 결과 표시를 연결하는 작업은 #15에 남아 있다.
+서버는 `127.0.0.1`에만 바인딩한다. 운영 인증 서버가 아니라 로컬 시연용이다. Vue 개발 서버의 `http://localhost:5173`과 `http://127.0.0.1:5173`만 CORS를 허용한다. Vue 개발 화면은 Vite 프록시(`/api/agent`)로 이 서버에 연결한다. 본사물류운영자 화면에서 메시지를 보내고 재질문과 차량별 결과를 확인한다. 기존 프론트 목업 선택값·지도는 Python 채팅과 별개다.
 
 `GET /health`는 상태와 실행 모드를 반환한다. `POST /api/chat`은 다음 JSON을 받는다. 클라이언트는 모델·키·역할·runtime_context·실행 모드를 지정할 수 없다.
 
 ```json
-{"message":"마포 서대문 은평 배차해줘"}
+{ "message": "마포 서대문 은평 배차해줘" }
 ```
 
 응답의 `thread_id`를 사용해 재질문에 답한다.
 
 ```json
-{"message":"2026-09-11","thread_id":"서버가 발급한 UUID"}
+{ "message": "2026-09-11", "thread_id": "서버가 발급한 UUID" }
 ```
 
 응답 필드는 `thread_id`, `request_id`, `mode`, `status`, `message`, `questions`, `request`, `result`, `error`, `model_calls`다. Python 타입은 `AgentReply`다.
