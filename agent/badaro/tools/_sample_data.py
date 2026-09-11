@@ -17,6 +17,8 @@ from badaro.schemas import (
 )
 
 _DATA_DIR = Path(__file__).resolve().parents[2] / "data"
+if not _DATA_DIR.is_dir():
+    _DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 _SEOUL = timezone(timedelta(hours=9))
 _STORAGE_TYPES = {
     "활어": StorageType.LIVE,
