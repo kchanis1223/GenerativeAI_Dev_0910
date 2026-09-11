@@ -4,6 +4,21 @@ v2 MVP는 요청 검증·호출 제한·오류 처리·최소 로그만 연결�
 모델 분기, 장기 저장, 기사 권한, 승인, 최종 문장 재생성은 기본 등록 대상이 아니다.
 공통 모델은 badaro.schemas를 사용하며 실제 Agent 연결은 #17에서 확인한다."""
 from . import store
+from .b07_model_routing import (
+    INTENT_CLASSIFICATION_SYSTEM_PROMPT,
+    ClassificationResult,
+    DispatchContext,
+    Intent,
+    IntentClassificationOutput,
+    IntentModel,
+    LangChainModelRoutingMiddleware,
+    LightweightIntentClassifier,
+    ModelRoutingMiddleware,
+    PromptedIntentModel,
+    RoutingDecision,
+    create_prompted_lightweight_intent_model,
+    prepare_lightweight_intent_model,
+)
 from .context import KST, BadaroContext, DepotProfile, RoleSource, UserRole
 from .dispatch_context import (
     STATE_LOAD_ERROR_KEY,
@@ -79,6 +94,11 @@ __all__ = [
     "STATE_LOAD_ERROR_KEY", "dispatch_context", "request_ref", "resolve_mode",
     "summarize_request",
     "model_routing", "route_model",
+    "INTENT_CLASSIFICATION_SYSTEM_PROMPT", "ClassificationResult", "DispatchContext",
+    "Intent", "IntentClassificationOutput", "IntentModel",
+    "LangChainModelRoutingMiddleware", "LightweightIntentClassifier",
+    "ModelRoutingMiddleware", "PromptedIntentModel", "RoutingDecision",
+    "create_prompted_lightweight_intent_model", "prepare_lightweight_intent_model",
     "POLL_MAX_ATTEMPTS", "RETRYABLE_CODES", "as_tool_error", "backoff_delay",
     "build_tool_retry", "can_resend", "default_retryable", "duplicate_risk",
     "requires_duplicate_check", "retry_hint", "safe_error_text", "should_retry",
