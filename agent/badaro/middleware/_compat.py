@@ -12,7 +12,11 @@ from typing import Any, Callable
 
 try:
     from langchain.agents.middleware import (
-        before_agent, before_model, wrap_model_call, wrap_tool_call, after_model,
+        after_model,
+        before_agent,
+        before_model,
+        wrap_model_call,
+        wrap_tool_call,
     )
     LANGCHAIN_AVAILABLE = True
 except ImportError:
