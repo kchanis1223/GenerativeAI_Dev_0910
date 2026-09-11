@@ -18,8 +18,11 @@ from badaro.schemas import (
     ToolErrorException,
 )
 
+from ._http import get as http_get
+from ._http import mock_enabled
+
 TMAP_GEOCODE_URL = "https://apis.openapi.sk.com/tmap/geo/fullAddrGeo"
-_CACHE: dict[str, GeocodeResult] = {}
+_CACHE: dict[tuple[bool, str], GeocodeResult] = {}
 
 load_dotenv()
 
@@ -36,15 +39,19 @@ def geocode_address(address: str) -> GeocodeResult:
     if not normalized_address:
         _raise_error(ToolErrorCode.INVALID_INPUT, "주소가 비어 있습니다", retryable=False)
 
-    cached = _CACHE.get(normalized_address)
+    use_mock = mock_enabled()
+    cache_key = (use_mock, normalized_address)
+    cached = _CACHE.get(cache_key)
     if cached is not None:
         return cached
 
     app_key = os.getenv("TMAP_APP_KEY", "").strip()
-    if not app_key:
+    if not app_key and not use_mock:
         _raise_error(
             ToolErrorCode.UNAUTHORIZED, "TMAP_APP_KEY가 설정되지 않았습니다", retryable=False
         )
+    if use_mock:
+        app_key = "mock"
 
     params = {
         "version": "1",
@@ -55,7 +62,7 @@ def geocode_address(address: str) -> GeocodeResult:
     }
     response = _request_once(params)
     result = _parse_response(normalized_address, response)
-    _CACHE[normalized_address] = result
+    _CACHE[cache_key] = result
     return result
 
 
@@ -68,7 +75,7 @@ def clear_geocode_cache() -> None:
 def _request_once(params: dict[str, str]) -> dict[str, Any]:
     """단일 HTTP 호출. 재시도는 공통 실행 계층(#13)이 담당한다."""
     try:
-        response = httpx.get(TMAP_GEOCODE_URL, params=params, timeout=10.0)
+        response = http_get(TMAP_GEOCODE_URL, params=params, timeout=10.0)
     except httpx.TimeoutException as exc:
         _raise_error(ToolErrorCode.TIMEOUT, "TMAP 지오코딩 요청 시간이 초과되었습니다", True)
         raise AssertionError("unreachable") from exc

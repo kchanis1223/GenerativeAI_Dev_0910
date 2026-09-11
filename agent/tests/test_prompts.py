@@ -83,6 +83,8 @@ def test_installed_wheel_loads_prompts_from_outside_repository(tmp_path: Path) -
 
     env = os.environ.copy()
     env["PYTHONPATH"] = str(install_dir)
+    env["USE_MOCK"] = "1"
+    env["TMAP_APP_KEY"] = ""
     result = subprocess.run(
         [
             sys.executable,
@@ -91,7 +93,17 @@ def test_installed_wheel_loads_prompts_from_outside_repository(tmp_path: Path) -
                 "from prompts import load_prompt_bundle; "
                 "bundle = load_prompt_bundle(); "
                 "assert '# R — Role' in bundle.system; "
-                "assert '시나리오 2' in bundle.fewshot"
+                "assert '시나리오 2' in bundle.fewshot; "
+                "from unittest.mock import patch; "
+                "from badaro.tools import geocode_address; "
+                "blocked = patch('httpx.get', side_effect=AssertionError('external HTTP')); "
+                "blocked.start(); "
+                "geo = geocode_address('서울특별시 중구 을지로 65'); "
+                "assert geo.candidates[0].lat == 37.56649; "
+                "from badaro.tools._http import get; "
+                "reply = get('https://apis.openapi.sk.com/tms/allocationData', "
+                "params={'mappingKey': '<mapping-key>', 'routeYn': 'N'}, timeout=1); "
+                "assert reply.json()['vehicleList'][0]['vehicleId'] == 'badaro-b02-vehicle'"
             ),
         ],
         cwd=outside_dir,

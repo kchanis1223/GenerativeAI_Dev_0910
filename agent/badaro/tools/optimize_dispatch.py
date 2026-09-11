@@ -18,6 +18,9 @@ from badaro.schemas import (
     ToolErrorException,
 )
 
+from ._http import get as http_get
+from ._http import mock_enabled
+
 _SEOUL = timezone(timedelta(hours=9))
 
 
@@ -72,8 +75,11 @@ def execute_optimize_dispatch(
             )
     load_dotenv()
     app_key = os.getenv("TMAP_APP_KEY", "").strip()
-    if not app_key:
+    use_mock = mock_enabled()
+    if not app_key and not use_mock:
         _raise_context_error(ToolErrorCode.UNAUTHORIZED, "TMAP_APP_KEY가 설정되지 않았습니다")
+    if use_mock:
+        app_key = "mock"
 
     selected_order_ids = [
         order_id
@@ -321,7 +327,7 @@ def _int_or_none(value: object):
 def _request_json(url: str, params: dict[str, str], *, phase: str) -> dict:
     """단일 호출 후 쿼리 파라미터를 노출하지 않고 오류를 분류한다."""
     try:
-        response = httpx.get(url, params=params, timeout=10.0)
+        response = http_get(url, params=params, timeout=10.0)
     except httpx.TimeoutException as exc:
         _raise_context_error(
             ToolErrorCode.TIMEOUT,
