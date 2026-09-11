@@ -1,4 +1,5 @@
 import inspect
+from datetime import datetime
 
 import pytest
 
@@ -157,8 +158,10 @@ def test_execute_optimize_dispatch_uses_input_address_as_geocode_key() -> None:
         }
     )
 
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(ToolErrorException) as exc_info:
         execute_optimize_dispatch(["ORDER-001"], ["VEHICLE-001"], None, context)
+
+    assert exc_info.value.error.code is ToolErrorCode.INVALID_INPUT
 
 
 def test_execute_optimize_dispatch_does_not_use_destination_id_as_geocode_key() -> None:
@@ -233,7 +236,13 @@ def test_execute_optimize_dispatch_requests_and_polls_tms(monkeypatch) -> None:
     monkeypatch.setenv("TMS_POLL_INTERVAL_SECONDS", "0")
     monkeypatch.setattr(module.httpx, "get", lambda *args, **kwargs: Response())
     result = execute_optimize_dispatch(
-        ["ORDER-001"], ["VEHICLE-001"], DispatchConstraints(priority=Priority.NORMAL), context
+        ["ORDER-001"],
+        ["VEHICLE-001"],
+        DispatchConstraints(
+            priority=Priority.NORMAL,
+            departure_time=datetime(2026, 9, 11, 5, 0),
+        ),
+        context,
     )
 
     assert result.status.value == "success"
