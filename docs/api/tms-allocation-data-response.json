@@ -1,0 +1,29 @@
+{
+  "resultCode": "200",
+  "vehicleCount": 1,
+  "resultMessage": "success",
+  "processTime": 0,
+  "vehicleList": [
+    {
+      "vehicleName": "바다로 B02 테스트 차량",
+      "deliveryTime": "4518",
+      "deliveryDistance": "19423",
+      "deliveryWeight": 100,
+      "orderList": [
+        {
+          "expectedDepartureTime": "202609111149",
+          "address": "서울특별시 중구 을지로 65",
+          "orderId": "badaro-b02-order",
+          "latitude": 37.56649,
+          "serviceTime": 10,
+          "zoneCode": "",
+          "orderName": "바다로 B02 테스트 배송지",
+          "longitude": 126.985121,
+          "expectedArrivalTime": "202609111139"
+        }
+      ],
+      "vehicleId": "badaro-b02-vehicle",
+      "deliveryCount": 1
+    }
+  ]
+}
