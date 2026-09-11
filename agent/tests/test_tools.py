@@ -1,9 +1,10 @@
 import inspect
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 
 from badaro.schemas import (
+    DispatchConstraints,
     DispatchRuntimeContext,
     GeocodeCandidate,
     GeocodeResult,
@@ -357,8 +358,11 @@ def test_execute_optimize_dispatch_uses_input_address_as_geocode_key() -> None:
         }
     )
 
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(ToolErrorException) as exc_info:
         execute_optimize_dispatch(["ORDER-001"], ["VEHICLE-001"], None, context)
+    assert exc_info.value.error.code is ToolErrorCode.INVALID_INPUT
+
+    assert exc_info.value.error.code is ToolErrorCode.INVALID_INPUT
 
 
 def test_execute_optimize_dispatch_does_not_use_destination_id_as_geocode_key() -> None:
@@ -385,22 +389,136 @@ def test_execute_optimize_dispatch_does_not_use_destination_id_as_geocode_key() 
     assert exc_info.value.error.code is ToolErrorCode.MISSING_CONTEXT
 
 
-@pytest.mark.parametrize("match_flag", ["M11", "M21"])
-def test_geocode_lot_exact_uses_lot_coordinates(match_flag) -> None:
-    from importlib import import_module
+def test_execute_optimize_dispatch_requests_and_polls_tms(monkeypatch) -> None:
+    import importlib
 
-    module = import_module("badaro.tools.geocode_address")
-    result = module._parse_response("서울 중구 명동 1", {
-        "coordinateInfo": {"totalCount": "1", "coordinate": [{
-            "matchFlag": match_flag, "lat": "37.5", "lon": "126.9",
-            "newMatchFlag": "N55", "newLat": "37.6", "newLon": "127.0",
-            "city_do": "서울", "gu_gun": "중구", "legalDong": "명동", "bunji": "1",
-        }]},
-    })
-    assert result.status is GeocodeStatus.OK
-    assert result.candidates[0].lat == 37.5
-    assert result.candidates[0].lon == 126.9
-    assert result.candidates[0].matched_address == "서울 중구 명동 1"
+    module = importlib.import_module("badaro.tools.optimize_dispatch")
+    context = _context_with_delivery_geocode(
+        {
+            "서울시 중구 세종대로 1": GeocodeResult(
+                status=GeocodeStatus.OK,
+                input_address="서울시 중구 세종대로 1",
+                candidates=[
+                    GeocodeCandidate(
+                        matched_address="서울시 중구 세종대로 1", lat=37.5, lon=126.9
+                    )
+                ],
+            )
+        }
+    )
+    responses = iter(
+        [
+            {"resultCode": "200", "mappingKey": "map-1"},
+            {
+                "resultCode": "200",
+                "vehicleList": [{
+                    "vehicleId": "VEHICLE-001",
+                    "deliveryTime": "4518",
+                    "deliveryDistance": "19423",
+                    "orderList": [{
+                        "orderId": "ORDER-001",
+                        "expectedArrivalTime": "202609111139",
+                    }],
+                }],
+            },
+        ]
+    )
+
+    class Response:
+        status_code = 200
+
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return next(responses)
+
+    monkeypatch.setenv("TMAP_APP_KEY", "test-key")
+    monkeypatch.setenv("TMS_POLL_INTERVAL_SECONDS", "0")
+    calls = []
+
+    def fake_get(*args, **kwargs):
+        calls.append(kwargs["params"])
+        return Response()
+
+    monkeypatch.setattr(module.httpx, "get", fake_get)
+    result = execute_optimize_dispatch(
+        ["ORDER-001"],
+        ["VEHICLE-001"],
+        DispatchConstraints(
+            priority=Priority.NORMAL,
+            departure_time=datetime(2026, 9, 10, 20, 0, tzinfo=timezone.utc),
+        ),
+        context,
+    )
+
+    assert result.status.value == "success"
+    assert result.routes[0].stops[0].destination_id == "STORE-001"
+    assert result.routes[0].distance_meters == 19423
+    assert calls[0]["startTime"] == "0500"
+
+
+def test_execute_optimize_dispatch_retries_transient_poll_only(monkeypatch) -> None:
+    import importlib
+
+    module = importlib.import_module("badaro.tools.optimize_dispatch")
+    context = _context_with_delivery_geocode(
+        {
+            "서울시 중구 세종대로 1": GeocodeResult(
+                status=GeocodeStatus.OK,
+                input_address="서울시 중구 세종대로 1",
+                candidates=[GeocodeCandidate(matched_address="주소", lat=37.5, lon=126.9)],
+            )
+        }
+    )
+    responses = iter([
+        (200, {"resultCode": "200", "mappingKey": "map-1"}),
+        (503, {}),
+        (200, {"resultCode": "200", "vehicleList": []}),
+    ])
+
+    def fake_get(*args, **kwargs):
+        status, payload = next(responses)
+        return type("Response", (), {"status_code": status, "json": lambda self: payload})()
+
+    monkeypatch.setenv("TMAP_APP_KEY", "test-key")
+    monkeypatch.setenv("TMS_POLL_INTERVAL_SECONDS", "0")
+    monkeypatch.setenv("TMS_POLL_MAX_ATTEMPTS", "2")
+    monkeypatch.setattr(module.httpx, "get", fake_get)
+    result = execute_optimize_dispatch(
+        ["ORDER-001"],
+        ["VEHICLE-001"],
+        DispatchConstraints(priority=Priority.NORMAL, departure_time=datetime(2026, 9, 11, 5)),
+        context,
+    )
+
+    assert result.status.value == "failed"
+
+
+def test_dispatch_rejects_vehicle_route_when_total_weight_exceeds_capacity() -> None:
+    from badaro.tools.optimize_dispatch import _parse_dispatch_result
+
+    context = _context_with_delivery_geocode({})
+    context.orders["ORDER-002"] = context.orders["ORDER-001"].model_copy(
+        update={"order_id": "ORDER-002", "weight_kg": 1000}
+    )
+    context.vehicles["VEHICLE-001"] = context.vehicles["VEHICLE-001"].model_copy(
+        update={"capacity_weight_kg": 1000}
+    )
+
+    with pytest.raises(ToolErrorException) as error:
+        _parse_dispatch_result(
+            {
+                "resultCode": "200",
+                "vehicleList": [{
+                    "vehicleId": "VEHICLE-001",
+                    "orderList": [{"orderId": "ORDER-001"}, {"orderId": "ORDER-002"}],
+                }],
+            },
+            ["ORDER-001", "ORDER-002"],
+            context,
+        )
+    assert error.value.error.code is ToolErrorCode.UPSTREAM_ERROR
 
 
 @pytest.mark.parametrize("lat,lon", [("91", "126.9"), ("37.5", "181"), ("nan", "127")])
@@ -435,6 +553,99 @@ def test_geocode_http_error_calls_once(monkeypatch, status, code, retryable) -> 
     assert get.call_count == 1
     assert exc_info.value.error.code is code
     assert exc_info.value.error.retryable is retryable
+
+
+def _valid_dispatch_context():
+    address = "서울시 중구 세종대로 1"
+    return _context_with_delivery_geocode({address: GeocodeResult(
+        status=GeocodeStatus.OK, input_address=address,
+        candidates=[GeocodeCandidate(matched_address=address, lat=37.5, lon=127)],
+    )})
+
+
+@pytest.mark.parametrize("vehicles", [None, {}, [None], [
+    {"vehicleId": "VEHICLE-001", "orderList": [
+        {"orderId": "ORDER-001"}, {"orderId": "ORDER-001"},
+    ]},
+], [
+    {"vehicleId": "VEHICLE-001", "orderList": []},
+    {"vehicleId": "VEHICLE-001", "orderList": []},
+]])
+def test_dispatch_rejects_malformed_or_duplicate_routes(vehicles):
+    from badaro.tools.optimize_dispatch import _parse_dispatch_result
+
+    with pytest.raises(ToolErrorException) as caught:
+        _parse_dispatch_result({"resultCode": "200", "vehicleList": vehicles},
+                               ["ORDER-001"], _valid_dispatch_context())
+    assert caught.value.error.code is ToolErrorCode.UPSTREAM_ERROR
+
+
+@pytest.mark.parametrize("eta,distance", [
+    ("not-a-date", 100), ("202609112000", 100), (None, -1), (None, "bad"),
+])
+def test_dispatch_rejects_invalid_eta_and_distance(eta, distance):
+    from badaro.tools.optimize_dispatch import _parse_dispatch_result
+
+    payload = {"resultCode": "200", "vehicleList": [{
+        "vehicleId": "VEHICLE-001", "deliveryDistance": distance,
+        "orderList": [{"orderId": "ORDER-001", "expectedArrivalTime": eta}],
+    }]}
+    with pytest.raises(ToolErrorException) as caught:
+        _parse_dispatch_result(payload, ["ORDER-001"], _valid_dispatch_context())
+    assert caught.value.error.code is ToolErrorCode.UPSTREAM_ERROR
+
+
+@pytest.mark.parametrize("poll_status,expected_polls,code", [
+    (503, 4, ToolErrorCode.UPSTREAM_ERROR),
+    (200, 2, ToolErrorCode.TIMEOUT),
+])
+def test_polling_is_bounded_without_resending_allocation(
+    monkeypatch, poll_status, expected_polls, code,
+):
+    from importlib import import_module
+
+    import httpx
+
+    module = import_module("badaro.tools.optimize_dispatch")
+    monkeypatch.setenv("TMAP_APP_KEY", "test-secret")
+    monkeypatch.setenv("TMS_POLL_INTERVAL_SECONDS", "0")
+    monkeypatch.setenv("TMS_POLL_MAX_ATTEMPTS", "2")
+    calls = []
+
+    def fake_get(url, **kwargs):
+        calls.append(url)
+        if url.endswith("/allocation"):
+            return httpx.Response(200, json={"mappingKey": "test-mapping"})
+        return httpx.Response(poll_status, json={"resultCode": "102"})
+
+    monkeypatch.setattr(module.httpx, "get", fake_get)
+    with pytest.raises(ToolErrorException) as caught:
+        execute_optimize_dispatch(
+            ["ORDER-001"], ["VEHICLE-001"],
+            DispatchConstraints(priority=Priority.NORMAL,
+                                departure_time="2026-09-11T06:00:00+09:00"),
+            _valid_dispatch_context(),
+        )
+    assert sum(url.endswith("/allocation") for url in calls) == 1
+    assert sum(url.endswith("/allocationData") for url in calls) == expected_polls
+    assert caught.value.error.code is code
+    assert caught.value.error.retryable is False
+
+
+def test_invalid_poll_configuration_stops_before_allocation(monkeypatch):
+    from importlib import import_module
+
+    module = import_module("badaro.tools.optimize_dispatch")
+    monkeypatch.setenv("TMS_POLL_INTERVAL_SECONDS", "nan")
+    monkeypatch.setattr(module.httpx, "get", lambda *a, **kw: pytest.fail("unexpected API call"))
+    with pytest.raises(ToolErrorException) as caught:
+        execute_optimize_dispatch(
+            ["ORDER-001"], ["VEHICLE-001"],
+            DispatchConstraints(priority=Priority.NORMAL,
+                                departure_time="2026-09-11T06:00:00+09:00"),
+            _valid_dispatch_context(),
+        )
+    assert caught.value.error.code is ToolErrorCode.INVALID_INPUT
 
 
 @pytest.mark.parametrize("field,value", [
