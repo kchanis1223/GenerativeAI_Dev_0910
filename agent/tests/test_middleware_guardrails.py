@@ -414,3 +414,123 @@ def test_mask_obj_walks_nested_structures():
     text = str(masked)
     assert "1234-5678" not in text
     assert "abcdefghijklmnopqrstuvwx" not in text
+
+
+# ── PR #37 리뷰 지적 5건 회귀 테스트 ─────────────────────────────────────
+
+def test_review_1_registered_names_are_callables_not_modules():
+    """등록 예제의 이름이 모듈이면 create_agent 가 AttributeError 로 죽는다."""
+    import types
+
+    from badaro.middleware import (
+        build_tool_retry,
+        dispatch_context,
+        input_validation,
+        model_routing,
+        result_validation,
+        tool_logging,
+    )
+    for obj in (input_validation, dispatch_context, model_routing,
+                tool_logging, result_validation, build_tool_retry()):
+        assert not isinstance(obj, types.ModuleType), f"{obj!r} 가 모듈입니다"
+
+
+def test_review_2_state_load_error_is_declared_and_terminates():
+    """State 정의에 키가 없거나 종료 분기가 없으면 안내 뒤에도 모델이 호출된다."""
+    import inspect
+
+    from badaro.middleware import dispatch_context as _hook
+    from badaro.middleware import state as state_mod
+    from badaro.middleware.state import BadaroState
+
+    assert "state_load_error" in BadaroState.__annotations__
+    assert "state_load_error" in initial_state()
+    assert inspect.getsource(state_mod).count("state_load_error") >= 2
+
+    import badaro.middleware.dispatch_context as dc_mod
+    assert 'can_jump_to=["end"]' in inspect.getsource(dc_mod)
+    assert _hook is not None
+
+
+def test_review_3_allow_list_matches_real_tool_signatures():
+    """허용 인자 목록이 #29 의 공개 Tool 시그니처와 정확히 같아야 한다."""
+    import inspect
+
+    from badaro.guardrails.allow_list import ALLOWED_ARGS
+    from badaro.tools import (
+        geocode_address,
+        get_available_vehicles,
+        get_delivery_orders,
+        optimize_dispatch,
+    )
+    for fn in (get_delivery_orders, get_available_vehicles, geocode_address,
+               optimize_dispatch):
+        params = set(inspect.signature(fn).parameters)
+        assert ALLOWED_ARGS[fn.__name__] == params, fn.__name__
+
+
+def test_review_3_normal_dispatch_args_pass():
+    """정상 배차 인자가 거부되면 배차 자체가 불가능하다."""
+    from badaro.schemas import DispatchConstraints
+    args = {"order_ids": ["ORD-20260911-001"], "vehicle_ids": ["LIVE01"],
+            "constraints": DispatchConstraints(priority=Priority.NORMAL)}
+    assert check_tool_args("optimize_dispatch", args) == []
+    assert check_tool_args("optimize_dispatch", {**args, "endpoint": "http://x"}) != []
+
+
+def test_review_4_dispatch_is_not_resent_without_duplicate_check():
+    """확인 수단이 없으면 배차 Tool 을 재전송하지 않는다 (중복 배차는 되돌릴 수 없다)."""
+    from badaro.middleware import retry as retry_mod
+
+    assert retry_mod.DUPLICATE_CHECKER is None
+    assert retry_mod.duplicate_risk("optimize_dispatch", {}) is True
+    assert retry_mod.duplicate_risk("geocode_address", {}) is False
+
+
+def test_review_4_error_text_is_masked():
+    """오류 문구에 남은 인증키·전화번호가 최종 Tool 메시지로 나가면 안 된다."""
+    from badaro.middleware.retry import safe_error_text
+    err = ToolError(code=ToolErrorCode.UPSTREAM_ERROR,
+                    message="appKey=l7xx9f3c2a1b0d4e5f6a7b8c9d0e1f2a3b 로 호출 실패, 담당 010-1234-5678",
+                    retryable=True)
+    masked = safe_error_text(ToolErrorException(err))
+    assert "l7xx9f3c" not in masked
+    assert "1234-5678" not in masked
+
+
+def test_review_5_sample_vehicle_ids_are_recognized():
+    """샘플 데이터 형식(LIVE01·COLD02·GENERAL01)을 인식하지 못하면 검증이 무력해진다."""
+    from badaro.middleware.result_validation import mentioned_vehicles
+    found = mentioned_vehicles("COLD02 가 S01 을 들르고 LIVE01 은 대기합니다")
+    assert "COLD02" in found
+    assert "LIVE01" in found
+
+
+def test_review_5_available_but_not_dispatched_vehicle_is_blocked():
+    result = DispatchResult(
+        status=DispatchStatus.SUCCESS,
+        routes=[VehicleRoute(vehicle_id="LIVE01", stops=[
+            Stop(sequence=1, order_id="ORD-1", destination_id="S01",
+                 eta=datetime.fromisoformat("2026-09-12T10:00:00")),
+        ])],
+        unassigned_orders=[],
+    )
+    state = {"vehicles": {"LIVE01": {}, "COLD02": {}}}
+    v = validate_response("COLD02 가 S01 로 갑니다", tms_result=result, state=state)
+    assert any(x["criterion"] == "vehicle" and x["found"] == "COLD02" for x in v)
+
+
+def test_review_5_wrong_eta_value_is_blocked():
+    """도착시간은 존재 여부가 아니라 값을 대조해야 한다."""
+    result = DispatchResult(
+        status=DispatchStatus.SUCCESS,
+        routes=[VehicleRoute(vehicle_id="LIVE01", stops=[
+            Stop(sequence=1, order_id="ORD-1", destination_id="S01",
+                 eta=datetime.fromisoformat("2026-09-12T10:00:00")),
+        ])],
+        unassigned_orders=[],
+    )
+    ok = validate_response("LIVE01 이 S01 에 10:00 도착합니다", tms_result=result)
+    assert ok == []
+    bad = validate_response("LIVE01 이 S01 에 23:59 도착합니다", tms_result=result)
+    assert any(x["criterion"] == "eta_value" and x["found"] == "23:59" for x in bad)
