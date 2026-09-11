@@ -46,12 +46,12 @@ import BadaroLogo from '../components/BadaroLogo.vue'
 <style scoped>
 .owner-page {
   min-height: 100dvh;
-  background: #f2f5f7;
+  background: var(--background);
 }
 .owner-back {
   margin-left: auto;
   font-size: 14px;
-  color: #466b74;
+  color: var(--text-secondary);
 }
 .owner-content {
   max-width: 1100px;
@@ -60,11 +60,11 @@ import BadaroLogo from '../components/BadaroLogo.vue'
 }
 .owner-content h2 {
   font-size: 28px;
-  color: #174a57;
+  color: var(--primary-800);
 }
 .owner-content p {
   margin-top: 14px;
-  color: #647b83;
+  color: var(--text-secondary);
   line-height: 1.8;
 }
 .owner-options {
@@ -74,23 +74,23 @@ import BadaroLogo from '../components/BadaroLogo.vue'
   margin-top: 40px;
 }
 .owner-options section {
-  border: 1px solid #d0e0e3;
+  border: 1px solid var(--border);
   border-radius: 10px;
   padding: 32px;
-  background: white;
-  color: #247f8e;
+  background: var(--surface);
+  color: var(--primary-600);
 }
 .owner-options h3 {
   font-size: 21px;
   margin-top: 24px;
-  color: #29464d;
+  color: var(--text-primary);
 }
 .owner-options button {
   margin-top: 32px;
   padding: 12px 20px;
   border-radius: 6px;
-  background: #edf2f3;
-  color: #697c83;
+  background: var(--selection);
+  color: var(--text-secondary);
   cursor: not-allowed;
 }
 @media (max-width: 650px) {

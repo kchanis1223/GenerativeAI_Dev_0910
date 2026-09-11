@@ -79,7 +79,7 @@ function draw() {
         radius: 8,
         color: 'white',
         weight: 2,
-        fillColor: '#138d99',
+        fillColor: '#3D97B4',
         fillOpacity: 0.85,
       })
         .bindPopup(

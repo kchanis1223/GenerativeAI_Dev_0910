@@ -116,7 +116,7 @@ async function enter(event: MouseEvent, destination: '/owner' | '/workspace') {
   margin: 0;
   padding: 32px 24px;
   overflow: hidden;
-  background: #5797a1;
+  background: var(--primary-800);
 }
 .landing::after {
   content: '';
@@ -171,13 +171,13 @@ async function enter(event: MouseEvent, destination: '/owner' | '/workspace') {
   gap: 28px;
   min-height: 76px;
   padding: 20px 28px;
-  border: 1px solid #e2ffffb3;
+  border: 1px solid var(--accent-200);
   border-radius: 18px;
-  background: #f0ffffe8;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
   box-shadow:
     0 14px 32px #002c3c38,
     inset 0 1px 0 #ffffff;
-  color: #124e5b;
+  color: var(--primary-800);
   font-family: 'JayeonSans', sans-serif;
   font-size: clamp(17px, 1.6vw, 22px);
   text-decoration: none;
@@ -195,7 +195,7 @@ async function enter(event: MouseEvent, destination: '/owner' | '/workspace') {
   font-size: 26px;
 }
 .role-entry:hover {
-  background: white;
+  background: var(--surface);
   box-shadow: 0 18px 40px #002c3c55;
 }
 .role-entry:hover,
@@ -224,7 +224,7 @@ async function enter(event: MouseEvent, destination: '/owner' | '/workspace') {
   pointer-events: none;
 }
 .navigation-error {
-  color: white;
+  color: var(--surface);
   font-family: 'JayeonSans', sans-serif;
   font-size: 14px;
 }

@@ -45,13 +45,13 @@ const draft = ref('')
 
 <style scoped>
 .agent-chat {
-  border: 1px solid #cfdfe2;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: linear-gradient(145deg, #f0f8f8, #fff 65%);
+  background: var(--surface);
   padding: 28px;
   margin-bottom: 28px;
   min-width: 0;
-  color: #29464d;
+  color: var(--text-primary);
 }
 .chat-header,
 .chat-header h2,
@@ -66,14 +66,14 @@ const draft = ref('')
   flex-wrap: wrap;
 }
 .chat-header h2 {
-  color: #176775;
+  color: var(--primary-600);
   font-size: 20px;
 }
 .chat-status {
   padding: 5px 9px;
   border-radius: 20px;
-  background: #e8efef;
-  color: #596f75;
+  background: var(--selection);
+  color: var(--text-secondary);
   font-size: 13px;
 }
 .chat-context {
@@ -81,17 +81,17 @@ const draft = ref('')
   gap: 6px 12px;
   margin-top: 15px;
   font-size: 13px;
-  color: #59757c;
+  color: var(--text-secondary);
 }
 .chat-composer {
   margin-top: 32px;
-  border: 1px solid #bdd4d8;
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 16px;
-  background: white;
+  background: var(--surface);
 }
 .chat-composer:focus-within {
-  outline: 2px solid #278f9d;
+  outline: 2px solid var(--primary-600);
   outline-offset: 2px;
 }
 .chat-composer textarea {
@@ -109,13 +109,13 @@ const draft = ref('')
   line-height: 1.6;
 }
 .chat-composer textarea::placeholder {
-  color: #788c92;
+  color: var(--text-secondary);
 }
 .chat-composer-footer {
   justify-content: space-between;
   margin-top: 10px;
   font-size: 12px;
-  color: #657b82;
+  color: var(--text-secondary);
 }
 .chat-composer-footer button {
   display: grid;
@@ -123,8 +123,8 @@ const draft = ref('')
   width: 34px;
   height: 34px;
   border-radius: 6px;
-  background: #e3eeee;
-  color: #80999d;
+  background: var(--border);
+  color: var(--text-secondary);
   cursor: not-allowed;
 }
 @media (max-width: 540px) {

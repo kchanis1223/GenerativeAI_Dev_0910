@@ -1,4 +1,4 @@
-export const routeColors = ['#008c8d', '#7962ca', '#d18426', '#3580b9', '#d26272']
+export const routeColors = ['#3D97B4', '#7962ca', '#d18426', '#0F7088', '#d26272']
 export const number = (value: number) => value.toLocaleString('ko-KR', { maximumFractionDigits: 1 })
 export const duration = (seconds: number) => {
   const pad = (v: number) => String(v).padStart(2, '0')

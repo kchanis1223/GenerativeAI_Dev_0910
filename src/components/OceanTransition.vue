@@ -45,16 +45,16 @@ import waterPhoto from '../asset/물 표면.jpg'
 .ocean-wake {
   position: absolute;
   inset: -20% 49%;
-  background: #e7ffff;
+  background: var(--background);
   border-radius: 50%;
   filter: blur(17px);
-  box-shadow: 0 0 80px 22px #b2f5fc;
+  box-shadow: 0 0 80px 22px var(--accent-200);
   animation: ocean-wake 1.25s ease-in both;
 }
 .ocean-mist {
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse at center, #d8ffff 0%, #d8ffff00 67%);
+  background: radial-gradient(ellipse at center, var(--accent-200) 0%, transparent 67%);
   animation: ocean-mist 1.25s both;
 }
 @keyframes ocean-left {

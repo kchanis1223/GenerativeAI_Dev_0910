@@ -63,7 +63,7 @@ async function lookup() {
 
 <style scoped>
 .live-center-lookup {
-  border-top: 1px solid #dce7e9;
+  border-top: 1px solid var(--border);
   padding: 20px;
   font-size: 14px;
   line-height: 1.6;
@@ -76,11 +76,11 @@ async function lookup() {
   flex-wrap: wrap;
 }
 .lookup-heading button {
-  border: 1px solid #c5dcdf;
+  border: 1px solid var(--border);
   border-radius: 5px;
   padding: 7px 10px;
-  color: #176775;
-  background: #f0f8f8;
+  color: var(--primary-600);
+  background: var(--background);
 }
 .lookup-heading button:disabled {
   opacity: 0.6;
@@ -88,7 +88,7 @@ async function lookup() {
 }
 .lookup-note {
   margin-top: 8px;
-  color: #657b82;
+  color: var(--text-secondary);
 }
 .lookup-error {
   margin-top: 10px;
@@ -105,10 +105,10 @@ li {
   display: grid;
   gap: 3px;
   padding: 10px 0;
-  border-top: 1px solid #e4eded;
+  border-top: 1px solid var(--border);
   overflow-wrap: anywhere;
 }
 li small {
-  color: #657b82;
+  color: var(--text-secondary);
 }
 </style>

@@ -51,7 +51,7 @@ const reducedMotion = useReducedMotion()
   position: absolute;
   inset: 0;
   overflow: hidden;
-  background: #07505f;
+  background: var(--primary-900);
 }
 .water-filter {
   position: absolute;
