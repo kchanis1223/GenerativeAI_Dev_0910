@@ -1,0 +1,21 @@
+# Last matching rule wins. Ownership follows CONTRIBUTING.md.
+* @kchanis1223
+/src/ @Hwiing
+/tests/ @Hwiing
+/public/ @Hwiing
+/index.html @Hwiing
+/package*.json @Hwiing
+/vite.config.ts @Hwiing
+/vitest.config.ts @Hwiing
+/playwright.config.ts @Hwiing
+/eslint.config.js @Hwiing
+/tsconfig.json @Hwiing
+/agent/badaro/schemas/ @hootbee
+/agent/prompts/ @hootbee
+/agent/badaro/tools/ @yunanana
+/agent/data/ @yunanana
+/docs/tms-api.md @yunanana
+/docs/api/ @yunanana
+/agent/badaro/middleware/ @bookschooler
+/agent/badaro/guardrails/ @bookschooler
+/agent/tests/ @Hwiing

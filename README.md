@@ -26,7 +26,7 @@ LLM은 해석·구조화·설명만 합니다. 차량 배정과 방문 순서는
 
 | 구성 | 위치 | 설명 |
 |---|---|---|
-| 에이전트 (Python · LangChain) | `agent/` | 자연어 → 구조화 → Tool 호출 → TMS 배차 → 결과 검증 |
+| 에이전트 (Python · LangChain) | `agent/` | 패키지·개발 환경 준비. 자연어 처리와 Tool 통합은 개발 예정 |
 | 화면 (Vue 3 · Vite) | `src/` | 센터·차량·배송지 관리, 배차 요청·결과, API 탐색. TMS 목업 내장 |
 | 문서 | `docs/` | 설계서, [TMS API 명세 정리](docs/tms-api.md), [프론트 가이드](docs/frontend.md) |
 
@@ -40,16 +40,51 @@ npm run dev          # http://127.0.0.1:5173
 npm test
 ```
 
-**에이전트** (뼈대 올라오면 갱신)
+**에이전트 개발 환경** (Python 3.11 이상, CI는 3.11)
 
 ```sh
 cd agent
-pip install -r requirements.txt
-cp .env.example .env         # OPENAI_API_KEY, TMAP_APP_KEY
-USE_MOCK=1 pytest
+python3 -m venv .venv
+source .venv/bin/activate    # Windows PowerShell: .venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+cp .env.example .env         # 아직 키를 입력하지 않아도 검증 가능
+python -m ruff check .
+USE_MOCK=1 python -m pytest
 ```
 
-키는 `.env`에만 둡니다. TMS 배차 요청은 **하루 20건**이라 실호출은 담당자만 합니다.
+현재 에이전트 테스트는 키 없이 패키지를 import하는 준비 단계만 검증합니다. 자연어 배차 실행은 B-17 통합 이후 제공하며, `USE_MOCK` 전환과 `.env` 로딩도 해당 구현에서 연결합니다. 프론트 목업은 지금 실행할 수 있습니다.
+
+의존성은 `agent/pyproject.toml`에서 관리합니다. `requirements.txt`는 개발 도구를 포함한 패키지 설치 진입점입니다. 모델명은 설계서의 미확정 항목이므로 `.env.example`에서 비워 두었습니다.
+
+키는 서버의 `agent/.env`에만 둡니다. TMS 배차 요청은 **하루 20건**이라 실호출은 담당자만 합니다.
+
+## 폴더 구조와 설계 기준
+
+```text
+agent/
+  badaro/
+    agent.py           # PM 통합 지점 (B-17)
+    schemas/           # 요청·결과 스키마 (B-03, B-05)
+    tools/             # 주문·차량 조회, 지오코딩, 배차 (B-08~10)
+    middleware/        # Context·State·Store, 실행 제어 (B-11~14)
+    guardrails/        # 입력·출력 검증 (B-14)
+  prompts/             # System Prompt·Few-shot (B-06)
+  data/                # 주문·차량 CSV와 목업 데이터 (B-04, B-10)
+  tests/               # Python 테스트 (B-16)
+  pyproject.toml       # Python 패키지·의존성·검증 설정
+  requirements.txt
+  .env.example
+src/                   # 기존 Vue 화면
+tests/                 # 프론트 단위·브라우저 테스트
+docs/                  # 설계서·프론트 가이드·API 문서
+  api/                 # 인증키를 제거한 실 API 요청·응답 예시
+notebooks/             # 개인 실험, notebooks/본인이름/ 사용
+.github/               # CI·CODEOWNERS·PR 템플릿
+```
+
+[설계서 초안 v1](docs/6반_3조_설계서_v1.docx)을 원본 그대로 보관합니다. 파일명은 v1이지만 문서 내부 최신 변경 이력은 v0.2입니다. [설계서와 코드의 대응 및 미확정 사항](docs/README.md)을 함께 확인하세요.
+
+CI는 프론트 lint·단위 테스트·build와 에이전트 Ruff·문법·import 테스트를 실행합니다. Python 업무 시나리오가 추가되면 같은 pytest 작업에서 실행됩니다. 브라우저 검증은 [프론트 가이드](docs/frontend.md)의 별도 명령을 사용합니다.
 
 ## 팀
 

@@ -2,7 +2,7 @@
 
 > 원래 README에 있던 프론트 설명을 그대로 옮긴 문서입니다. 전체 프로젝트 개요는 [README](../README.md).
 
-Vue 3 + TypeScript + Vite로 구현한 센터·차량·배송지 관리와 배차 흐름을 시연하는 프론트엔드입니다. `/Users/hwi/skala-workspace/skala-langchain` 폴더가 프로젝트 루트입니다.
+Vue 3 + TypeScript + Vite로 구현한 센터·차량·배송지 관리와 배차 흐름을 시연하는 프론트엔드입니다. 저장소를 clone한 폴더가 프로젝트 루트입니다.
 
 ## 실행
 
