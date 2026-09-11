@@ -14,7 +14,7 @@ from badaro.middleware import KST, initial_state
 from badaro.middleware.input_validation import validate_dispatch_input
 from badaro.middleware.tool_logging import emit
 from badaro.runtime.backend import Backend
-from badaro.runtime.contracts import AgentReply, RequestDraft, Settings
+from badaro.runtime.contracts import AgentReply, DispatchMap, RequestDraft, Settings
 from badaro.runtime.data import catalog, depot_profile
 from badaro.runtime.graph import build_graph
 from badaro.runtime.models import models
@@ -260,7 +260,22 @@ class DispatchAgent:
             f"미배정 {len(dispatch.unassigned_orders)}건. 제공되지 않은 ETA는 표시하지 않습니다."
         )
         return self._reply(
-            thread_id, session, "completed", message, request=request, result=dispatch
+            thread_id,
+            session,
+            "completed",
+            message,
+            request=request,
+            result=dispatch,
+            map_data=DispatchMap(
+                origin=self.profile.origin,
+                stops={
+                    stop.order_id: result["geocodes"][
+                        result["orders"][stop.order_id].address
+                    ].candidates[0]
+                    for route in dispatch.routes
+                    for stop in route.stops
+                },
+            ),
         )
 
 

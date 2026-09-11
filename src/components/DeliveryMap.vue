@@ -2,16 +2,18 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import type { TmsRow, VehiclePlan } from '../types/tms'
+import type { TmsRow } from '../types/tms'
+import type { MapPlan } from '../services/agent-map'
 import { arrival, routeColors } from '../services/dispatch-display'
 
 const props = defineProps<{
   center?: TmsRow
   orders: TmsRow[]
-  plans: VehiclePlan[]
+  plans: MapPlan[]
   visibleIds: string[]
   activeId: string
   hasResult: boolean
+  agentSource?: boolean
 }>()
 const emit = defineEmits<{ select: [id: string] }>()
 const element = ref<HTMLElement>()
@@ -210,9 +212,11 @@ onBeforeUnmount(() => {
     </p>
     <p class="map-disclaimer">
       {{
-        hasResult
-          ? '점선은 목업 직선 경로입니다. 실제 도로 경로와 다릅니다.'
-          : '노량진센터 출발 · 서울 지점의 실제 주소 기준'
+        agentSource
+          ? '점선은 확정 좌표를 방문 순서대로 연결한 선입니다. 실제 도로 경로가 아닙니다.'
+          : hasResult
+            ? '점선은 목업 직선 경로입니다. 실제 도로 경로와 다릅니다.'
+            : '노량진센터 출발 · 서울 지점의 실제 주소 기준'
       }}
     </p>
   </section>

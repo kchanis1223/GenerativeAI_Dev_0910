@@ -19,8 +19,23 @@ import AgentChat from '../components/AgentChat.vue'
 import LiveCenterLookup from '../components/LiveCenterLookup.vue'
 import { createDispatchConsole } from '../stores/dispatch-console'
 import { arrival, duration, number, routeColors } from '../services/dispatch-display'
+import { agentMap } from '../services/agent-map'
+import { modeLabels, type AgentReply } from '../services/agent'
 
 const consoleState = createDispatchConsole()
+const mapSource = ref<'agent' | 'mock'>('mock')
+const agentReply = ref<AgentReply | null>(null)
+const agentActiveId = ref('')
+const agentMapData = computed(() => agentMap(agentReply.value))
+function updateAgentResult(reply: AgentReply | null) {
+  agentReply.value = reply
+  agentActiveId.value = reply?.result?.routes[0]?.vehicle_id ?? ''
+  mapSource.value = 'agent'
+}
+function selectMapPlan(id: string) {
+  if (mapSource.value === 'agent') agentActiveId.value = id
+  else void selectPlan(id)
+}
 const {
   data,
   state,
@@ -151,7 +166,7 @@ onBeforeUnmount(consoleState.dispose)
 
     <main class="console-grid">
       <aside ref="controlPanel" class="control-panel" aria-label="배송 선택과 배차 결과">
-        <AgentChat />
+        <AgentChat @result="updateAgentResult" />
         <section class="setup-area" aria-label="배차 설정">
           <fieldset class="setup-fields" :disabled="state.busy">
             <legend class="sr-only">센터, 차량, 배송정보 선택</legend>
@@ -518,18 +533,36 @@ onBeforeUnmount(consoleState.dispose)
         </section>
       </aside>
       <div class="map-column">
+        <div class="map-source" role="group" aria-label="지도 데이터 선택">
+          <button :aria-pressed="mapSource === 'agent'" @click="mapSource = 'agent'">
+            에이전트 결과
+          </button>
+          <button :aria-pressed="mapSource === 'mock'" @click="mapSource = 'mock'">
+            목업 데이터
+          </button>
+          <span v-if="mapSource === 'agent' && !agentMapData">표시할 배차 좌표가 없습니다.</span>
+        </div>
         <DeliveryMap
-          :center="center"
-          :orders="orders"
-          :plans="plans"
-          :visible-ids="state.visibleVehicleIds"
-          :active-id="state.activeVehicleId"
-          :has-result="!!state.result"
-          @select="selectPlan"
+          :center="mapSource === 'agent' ? agentMapData?.center : center"
+          :orders="mapSource === 'agent' ? [] : orders"
+          :plans="mapSource === 'agent' ? (agentMapData?.plans ?? []) : plans"
+          :visible-ids="
+            mapSource === 'agent'
+              ? (agentMapData?.plans.map((p) => p.vehicleId) ?? [])
+              : state.visibleVehicleIds
+          "
+          :active-id="mapSource === 'agent' ? agentActiveId : state.activeVehicleId"
+          :has-result="mapSource === 'agent' ? !!agentMapData : !!state.result"
+          :agent-source="mapSource === 'agent'"
+          @select="selectMapPlan"
         />
         <footer class="console-footer">
           <span>BADARO <span>배송을 잇다, 바다로.</span></span
-          ><span>목업 데이터 · 직선 거리와 시속 30km 기준 · 납품 희망시간은 참고용</span>
+          ><span>{{
+            mapSource === 'agent'
+              ? `${agentReply ? modeLabels[agentReply.mode] + ' · ' : ''}확정 좌표와 방문 순서 기준`
+              : '목업 데이터 · 직선 거리와 시속 30km 기준 · 납품 희망시간은 참고용'
+          }}</span>
         </footer>
       </div>
     </main>
@@ -546,3 +579,26 @@ onBeforeUnmount(consoleState.dispose)
     />
   </div>
 </template>
+
+<style scoped>
+.map-source {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: white;
+  font-size: 12px;
+}
+.map-source button {
+  padding: 7px 12px;
+  border: 1px solid #d4dde2;
+  border-radius: 6px;
+  background: white;
+  cursor: pointer;
+}
+.map-source button[aria-pressed='true'] {
+  background: #e9f5f8;
+  border-color: #3d97b4;
+  color: #215f73;
+}
+</style>

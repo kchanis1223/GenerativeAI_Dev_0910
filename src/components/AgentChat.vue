@@ -17,6 +17,7 @@ const error = ref('')
 const threadId = ref<string>()
 const finished = ref(false)
 const messages = ref<{ text: string; reply?: AgentReply }[]>([])
+const emit = defineEmits<{ result: [reply: AgentReply | null] }>()
 async function connect() {
   connecting.value = true
   error.value = ''
@@ -32,6 +33,7 @@ async function connect() {
 }
 onMounted(connect)
 function reset() {
+  emit('result', null)
   threadId.value = undefined
   finished.value = false
   messages.value = []
@@ -42,6 +44,7 @@ async function send() {
   const text = draft.value.trim()
   if (!text || busy.value || finished.value || !mode.value) return
   busy.value = true
+  emit('result', null)
   error.value = ''
   messages.value.push({ text })
   draft.value = ''
@@ -51,6 +54,7 @@ async function send() {
     mode.value = reply.mode
     finished.value = reply.status !== 'needs_clarification'
     messages.value.push({ text: reply.message, reply })
+    emit('result', reply)
   } catch (cause) {
     // A lost response may still have executed dispatch. Never resend automatically.
     finished.value = true
@@ -71,8 +75,8 @@ const resultLabels = { success: '배차 성공', partial: '일부 배차', faile
       }}</span>
     </header>
     <p class="chat-context">
-      본사 운영자 로컬 시연 · 배차 조건은 메시지에 입력하세요. 아래 프론트 목업 선택값과 지도는
-      에이전트에 연결되지 않습니다.
+      배차 조건은 메시지에 입력하세요. 결과의 배송 순서는 지도에 점선으로 표시합니다. 아래 목업
+      선택값은 채팅 요청에 적용되지 않습니다.
     </p>
     <p v-if="mode === 'offline'" class="chat-context">
       예: 마포 서대문 은평 배차해줘 → 배송일 질문에 2026-09-11 입력. 시간 변경·재배차는 지원하지

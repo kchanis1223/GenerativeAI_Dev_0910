@@ -4,6 +4,15 @@ export const modeLabels = {
   live: '실제 API',
 }
 export type AgentMode = keyof typeof modeLabels
+export interface MapPoint {
+  lat: number
+  lon: number
+  matched_address: string
+}
+export interface AgentMapData {
+  origin: MapPoint
+  stops: Record<string, MapPoint>
+}
 export interface AgentResult {
   status: 'success' | 'partial' | 'failed'
   routes: {
@@ -26,6 +35,7 @@ export interface AgentReply {
   message: string
   questions: string[]
   result: AgentResult | null
+  map_data?: AgentMapData | null
   error: { code: string; message: string; retryable: boolean } | null
 }
 const record = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object'
@@ -88,6 +98,28 @@ export function parseReply(v: unknown): AgentReply {
       ))
   )
     throw new Error('배차 결과 형식을 확인할 수 없습니다.')
+  const point = (p: unknown): p is MapPoint =>
+    record(p) &&
+    typeof p.lat === 'number' &&
+    Number.isFinite(p.lat) &&
+    Math.abs(p.lat) <= 90 &&
+    typeof p.lon === 'number' &&
+    Number.isFinite(p.lon) &&
+    Math.abs(p.lon) <= 180 &&
+    typeof p.matched_address === 'string'
+  const map = v.map_data
+  if (
+    map != null &&
+    (!record(map) ||
+      !point(map.origin) ||
+      !record(map.stops) ||
+      !Object.values(map.stops).every(point) ||
+      !r ||
+      !(r as unknown as AgentResult).routes.every((route) =>
+        route.stops.every((stop) => Object.hasOwn(map.stops as object, stop.order_id)),
+      ))
+  )
+    throw new Error('배차 지도 좌표를 확인할 수 없습니다.')
   return v as unknown as AgentReply
 }
 export async function agentHealth(): Promise<AgentMode> {

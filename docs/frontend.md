@@ -52,7 +52,7 @@ http://127.0.0.1:5173 의 `/`는 물 표면·일렁이는 로고가 있는 랜�
 
 ## API 연결 위치
 
-현재 UI는 목업 전용이며 API 키·백엔드·LangChain Agent를 포함하지 않습니다. 실제 응답을 받으면 `createDispatchConsole`의 `DispatchRequest` 어댑터를 서버 프록시에 연결하고 결과 형식을 정규화합니다. API 탐색 화면은 제거했지만 [24개 API 명세·목업 정책](tms-api.md)과 `src/data/tms-api-catalog.json`, CRUD 엔진 및 검증은 유지합니다.
+`AgentChat`은 Python Agent API에 연결됩니다. 응답의 `map_data`에는 출발 센터와 이번 요청에서 확정된 배정 주문 좌표만 포함합니다. `agent-map.ts`가 방문 순서대로 점선을 만들며 실제 도로 조회나 ETA 추정을 추가하지 않습니다. 미배정 주문은 경로에서 제외하며 새 요청·재질문·실패 시 이전 경로를 지웁니다. 지도 상단에서 에이전트 결과와 기존 목업을 전환합니다. 위의 시속 30km 계산과 아래 선택 패널은 프론트 목업에만 적용됩니다. [24개 API 명세·목업 정책](tms-api.md)과 CRUD 엔진은 유지합니다.
 
 `MockContext.centerId`, `deliveryDate`, `returnToCenter`는 공식 요청 JSON과 분리한 목업 실행 정보입니다. 화면의 복귀 체크박스는 이 목업 설정으로 차량 CSV의 기본 종착지보다 우선합니다. 실제 API에서 센터·배송일·차량 종착지의 대응 방식은 실제 명세와 응답에 맞춰 연결해야 합니다. 기존 센터 프록시 어댑터는 `src/services/centers.ts`에 보관되어 있습니다.
 
