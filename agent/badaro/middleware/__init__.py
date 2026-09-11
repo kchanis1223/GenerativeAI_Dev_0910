@@ -1,9 +1,9 @@
 """바다로 미들웨어와 검증 함수.
 
 v2 MVP는 요청 검증·호출 제한·오류 처리·최소 로그만 연결한다.
-모델 분기, 장기 저장, 기사 권한, 승인, 최종 문장 재생성은 기본 등록 대상이 아니다.
-공통 모델은 badaro.schemas를 사용하며 실제 Agent 연결은 #17에서 확인한다."""
-from . import store
+모델 분기와 장기 저장 코드는 제거했다. 결과 문장 검증과 권한 호환 코드는
+현재 Agent에 등록하지 않으며 회귀 테스트용으로 유지한다.
+공통 모델은 badaro.schemas, 실제 Agent 연결은 badaro.runtime.graph를 따른다."""
 from .context import KST, BadaroContext, DepotProfile, RoleSource, UserRole
 from .dispatch_context import (
     STATE_LOAD_ERROR_KEY,
@@ -26,7 +26,6 @@ from .input_validation import (
     validate_dispatch_input,
     validate_geocode_candidate,
 )
-from .model_routing import model_routing, route_model
 from .result_validation import (
     as_dict,
     build_error_response,
@@ -67,7 +66,6 @@ from .state import (
 from .tool_logging import build_log_record, tool_logging
 
 __all__ = [
-    "store",
     "KST", "BadaroContext", "DepotProfile", "RoleSource", "UserRole",
     "ApprovalStatus", "BadaroState", "confirmed_coord", "initial_state",
     "is_approved", "is_confirmed_geocode", "latest_snapshot",
@@ -78,7 +76,6 @@ __all__ = [
     "validate_geocode_candidate",
     "STATE_LOAD_ERROR_KEY", "dispatch_context", "request_ref", "resolve_mode",
     "summarize_request",
-    "model_routing", "route_model",
     "POLL_MAX_ATTEMPTS", "RETRYABLE_CODES", "as_tool_error", "backoff_delay",
     "build_tool_retry", "can_resend", "default_retryable", "duplicate_risk",
     "requires_duplicate_check", "retry_hint", "safe_error_text", "should_retry",

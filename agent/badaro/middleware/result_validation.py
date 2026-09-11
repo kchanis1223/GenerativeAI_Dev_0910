@@ -1,4 +1,7 @@
-"""ResultValidation — 설계서 3.2 / 3.2.2, G-04 (이슈 #14)
+"""이전 설계의 ResultValidation — 정확성 회귀 테스트용으로 유지한다.
+
+현재 v2 Agent에는 등록하지 않는다. 현재 결과 검증은 tools/optimize_dispatch.py,
+구조화 결과 표시는 runtime/graph.py와 agent.py에서 처리한다.
 
 TMS 결과와 최종 설명의 차량·방문 순서·시간·미배정 정보를 대조한다.
 불일치는 1회 재생성하고, 재검증에도 실패하면 구조화 오류를 반환한다.

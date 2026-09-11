@@ -3,7 +3,7 @@
 G-01 입력 범위/형식        middleware/input_validation.py
 G-02 인젝션/Secret 보호     injection.py
 G-03 Tool 인자 allow-list   allow_list.py
-G-04 근거 없는 생성 방지     middleware/result_validation.py
+G-04 배차 결과 검증         tools/optimize_dispatch.py (v2는 구조화 결과를 직접 표시)
 G-05 PII 마스킹            pii.py
 """
 from . import allow_list, injection, pii
