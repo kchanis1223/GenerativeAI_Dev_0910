@@ -17,6 +17,8 @@ from __future__ import annotations
 import hashlib
 from typing import Any, Literal
 
+from pydantic import BaseModel
+
 from ._compat import ai_message, before_model
 
 STATE_LOAD_ERROR_KEY = "state_load_error"
@@ -49,6 +51,8 @@ def request_ref(dispatch_request: dict[str, Any] | None) -> str:
     """배차 조건의 짧은 참조 ID. 같은 조건이면 항상 같은 값이 나온다."""
     if not dispatch_request:
         return "req-none"
+    if isinstance(dispatch_request, BaseModel):
+        dispatch_request = dispatch_request.model_dump(mode="json")
     raw = repr(sorted(dispatch_request.items())).encode("utf-8")
     return "req-" + hashlib.sha256(raw).hexdigest()[:8]
 
@@ -59,6 +63,8 @@ def summarize_request(state: dict[str, Any]) -> str | None:
         return None
 
     req = state["dispatch_request"]
+    if isinstance(req, BaseModel):
+        req = req.model_dump(mode="json")
     parts = [f"ref={request_ref(req)}"]
     if req.get("depot_id"):
         parts.append(f"센터 {req['depot_id']}")

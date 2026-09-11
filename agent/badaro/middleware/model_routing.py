@@ -1,12 +1,4 @@
-"""ModelRoutingMiddleware — 3.2 (이슈 #12 B-12 · v2 우선순위 P1)
-
-Hook  : wrap_model_call (모델 호출을 감싼다)
-목적  : 단순 분류·조회는 경량 모델로, 배차 계획 같은 복합 추론은 메인 모델로 보낸다.
-실패 시: 판단이 애매하면 무조건 메인 모델로 간다 (v2 "메인 모델로 fallback").
-
-⚠ v2 에서 이 미들웨어는 P0 → P1 로 내려갔다. 시연 필수는 아니고, 시간이 되면 켜는 쪽.
-   그래서 라우팅이 틀려도 '느려지거나 비싸질 뿐' 결과가 망가지지 않도록 설계했다.
-"""
+"""기존 모델 분기 코드. v2 MVP에서는 등록하지 않는다."""
 from __future__ import annotations
 
 from typing import Any, Literal

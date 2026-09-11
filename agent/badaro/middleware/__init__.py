@@ -1,18 +1,8 @@
-"""바다로 미들웨어 — 설계서 3.2 (담당: 윤소영)
+"""바다로 미들웨어와 검증 함수.
 
-#11  context / state / store / runtime_context
-#12  input_validation / dispatch_context / model_routing
-#13  retry / tool_logging
-#14  result_validation
-
-등록 예시 (#17):
-    middleware=[input_validation, dispatch_context, model_routing,
-                build_tool_retry(), tool_logging, result_validation]
-여기 이름은 모두 훅 함수다. 같은 이름의 모듈이 아니라 함수가 바인딩된다.
-
-공통 데이터 타입은 badaro.schemas(B-03)를 그대로 쓴다.
-기준: 6반_3조_설계서 v1.3
-"""
+v2 MVP는 요청 검증·호출 제한·오류 처리·최소 로그만 연결한다.
+모델 분기, 장기 저장, 기사 권한, 승인, 최종 문장 재생성은 기본 등록 대상이 아니다.
+공통 모델은 badaro.schemas를 사용하며 실제 Agent 연결은 #17에서 확인한다."""
 from . import store
 from .context import KST, BadaroContext, DepotProfile, RoleSource, UserRole
 from .dispatch_context import (

@@ -1,11 +1,6 @@
-"""LangChain 미들웨어 데코레이터 호환 층 (담당: 윤소영)
+"""LangChain 미들웨어 데코레이터와 메시지 호환 함수.
 
-왜 필요한가:
-  팀 requirements.txt(#17, 김동찬)가 아직 안 올라와서 langchain 이 설치되지 않은 상태다.
-  그런데 미들웨어 파일이 langchain import 로 바로 죽어버리면 CI 의 ruff·pytest 가 전부 깨진다.
-  그래서 langchain 이 있으면 진짜 데코레이터를, 없으면 '아무것도 안 하는' 데코레이터를 쓴다.
-  → 검증 로직(순수 함수)은 langchain 없이도 지금 바로 테스트할 수 있다.
-"""
+실제 실행은 pyproject.toml의 LangChain 의존성을 설치한 환경에서 검증한다."""
 from __future__ import annotations
 
 from typing import Any, Callable
@@ -47,6 +42,6 @@ def tool_message(text: str, tool_call_id: str | None = None) -> Any:
     """ToolMessage 를 만든다. langchain 이 없으면 dict 로 대체한다."""
     try:
         from langchain_core.messages import ToolMessage
-        return ToolMessage(content=text, tool_call_id=tool_call_id or "unknown")
+        return ToolMessage(content=text, tool_call_id=tool_call_id or "unknown", status="error")
     except ImportError:
-        return {"role": "tool", "content": text, "tool_call_id": tool_call_id}
+        return {"role": "tool", "content": text, "tool_call_id": tool_call_id, "status": "error"}

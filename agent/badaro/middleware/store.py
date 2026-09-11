@@ -1,8 +1,4 @@
-"""바다로 Dispatch Copilot — 3.1 Store (이슈 #11 B-11 / 설계서 v2 3.1)
-
-Store = 대화(thread)를 넘어 남는 값. checkpointer 가 아니라 BaseStore 가 보관한다.
-State 와의 차이: State 는 "이번 대화", Store 는 "이 조직의 계속 쓰는 데이터".
-"""
+"""기존 장기 저장소 접근 함수. v2 MVP에서는 연결하지 않는다."""
 from __future__ import annotations
 
 from typing import Any

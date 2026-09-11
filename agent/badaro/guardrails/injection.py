@@ -1,13 +1,6 @@
-"""G-02 프롬프트 인젝션 · Secret 보호 — 설계서 3.3 (심각도 High)
+"""시스템 지침 변경과 인증정보 요청의 알려진 문구를 검사한다.
 
-프롬프트 인젝션(prompt injection) = 사용자 입력에 '지시문'을 섞어 넣어
-모델이 원래 받은 시스템 지침 대신 그걸 따르게 만드는 공격.
-injection 은 '주입'이라는 뜻으로, SQL 인젝션에서 온 이름이다.
-
-v2 배치: 1단 규칙 필터(before_agent) → 통과한 것만 2단 경량 분류 모델(before_model).
-        싼 것부터 거르고 비싼 판별기는 나중에 쓴다는 3.3 설계 원칙.
-        여기서는 1단(규칙)만 구현한다. 2단은 이준형의 의도 분류(#7)와 묶인다.
-"""
+규칙 검사만으로 모든 인젝션을 차단하지는 않는다. Tool 허용 인자 검사를 함께 적용한다."""
 from __future__ import annotations
 
 import re
@@ -27,7 +20,7 @@ _RULES: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"(?i)(reveal|show|print|repeat)\s+(your\s+)?(system\s+)?(prompt|instruction)"),
      "prompt_exfiltration"),
 
-    (re.compile(r"(?i)(app\s*key|api\s*key|인증\s*키|비밀\s*키|access\s*token)\w*\s*(을|를)?\s*"
+    (re.compile(r"(?i)(app\s*key|api\s*(?:key|키)|인증\s*키|비밀\s*키|access\s*token)\w*\s*(을|를)?\s*"
                 r"(알려|보여|출력|말해|줘|내놔|print|show|tell)"), "secret_exfiltration"),
     (re.compile(r"(?i)\.env\s*(파일)?\s*(을|를)?\s*(보여|출력|읽어|cat)"), "secret_exfiltration"),
 

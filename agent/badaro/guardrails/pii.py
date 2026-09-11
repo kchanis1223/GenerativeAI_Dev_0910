@@ -1,14 +1,4 @@
-"""G-05 PII 마스킹 — 설계서 3.3 (심각도 v2에서 Medium → High 상향)
-
-PII = Personally Identifiable Information, '개인 식별 정보'.
-개인을 특정할 수 있는 값(전화번호, 상세주소, 인증키)을 뜻한다.
-
-⚠ 이 파일은 #13(로그 마스킹)에서 먼저 만들고, #14(출력 마스킹)에서 그대로 재사용한다.
-   로그에 전화번호 원문이 없어야 한다는 #13 완료 기준이 마스킹 함수를 먼저 요구하기 때문.
-
-근거: 쿠팡 개인정보 유출 과징금 사건에서 유출 항목에 배송지 주소가 포함되어 있었다.
-      LangChain 내장 PIIMiddleware 에는 국내 전화번호·상세주소 탐지기가 없어 직접 등록해야 한다.
-"""
+"""인증정보·전화번호·상세주소를 표시용 문자열과 로그에서 마스킹한다."""
 from __future__ import annotations
 
 import re
@@ -19,12 +9,13 @@ PHONE_RE = re.compile(r"(?<![\d+])(?:\+?82[-.\s]?0?|0)\d{1,2}[-.\s]?\d{3,4}[-.\s
 ADDRESS_DETAIL_RE = re.compile(r"\d+\s*동\s*\d+\s*호")
 
 SECRET_KV_RE = re.compile(
-    r"(?i)\b(app[-_]?key|api[-_]?key|access[-_]?token|authorization|secret)\b\s*[:=]\s*"
+    r"(?i)\b(app[-_]?key|api[-_]?key|access[-_]?token|authorization|secret)\b['\"]?\s*[:=]\s*"
     r"(?:Bearer\s+)?['\"]?([^\s'\",;]+)"
 )
 BARE_TOKEN_RE = re.compile(r"(?<![A-Za-z0-9])[A-Za-z0-9]{24,}(?![A-Za-z0-9])")
 
 MASK = "***"
+SECRET_KEYS = {"appkey", "apikey", "accesstoken", "authorization", "secret", "token", "password"}
 
 
 def mask_phone(text: str) -> str:
@@ -70,7 +61,11 @@ def mask_obj(obj: Any, _depth: int = 0) -> Any:
     if isinstance(obj, str):
         return mask_text(obj)
     if isinstance(obj, dict):
-        return {k: mask_obj(v, _depth + 1) for k, v in obj.items()}
+        return {
+            k: MASK if re.sub(r"[-_ ]", "", str(k).lower()) in SECRET_KEYS
+            else mask_obj(v, _depth + 1)
+            for k, v in obj.items()
+        }
     if isinstance(obj, (list, tuple)):
         return type(obj)(mask_obj(v, _depth + 1) for v in obj)
     return obj

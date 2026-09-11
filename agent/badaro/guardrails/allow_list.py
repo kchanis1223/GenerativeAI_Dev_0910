@@ -1,14 +1,4 @@
-"""G-03 Tool 인자 Allow-list — 설계서 3.3 (심각도 High)
-
-allow-list = '허용 목록'. 막을 것을 나열하는 deny-list 와 반대로,
-허용된 것만 통과시키고 나머지는 전부 막는 방식이다. 새로운 공격이 나와도 자동으로 막힌다.
-
-허용 인자는 badaro.tools 의 공개 Tool 시그니처(#29)와 일치시킨다.
-runtime_context 는 서버가 주입하는 내부 인자이므로 LLM 인자로 허용하지 않는다.
-
-탐지 대상: Tool 인자에 endpoint / header / appKey 변경 시도가 있으면 호출 차단.
-왜 위험한가: 모델이 인자로 endpoint 를 바꿔치기하면 우리 appKey 를 공격자 서버로 보내게 된다.
-"""
+"""공개 Tool 이름과 인자를 검사한다. 실행 설정과 runtime_context는 서버가 관리한다."""
 from __future__ import annotations
 
 from typing import Any
@@ -53,7 +43,8 @@ def check_tool_args(tool_name: str, args: Any) -> list[dict[str, Any]]:
     """
     violations: list[dict[str, Any]] = []
     if not isinstance(args, dict):
-        return violations
+        return [{"guardrail": "G-03", "reason": "bad_type",
+                 "message": "Tool 인자는 객체여야 합니다."}]
 
     allowed = ALLOWED_ARGS.get(tool_name)
     if allowed is None:
@@ -69,6 +60,13 @@ def check_tool_args(tool_name: str, args: Any) -> list[dict[str, Any]]:
         elif str(key) not in allowed:
             violations.append({"guardrail": "G-03", "reason": "not_allowed", "arg": str(key),
                                "message": f"'{tool_name}' 에 허용되지 않은 인자입니다: {key}"})
+    constraints = args.get("constraints")
+    if isinstance(constraints, dict):
+        from badaro.schemas import DispatchConstraints
+        unknown = set(constraints) - set(DispatchConstraints.model_fields)
+        if unknown:
+            violations.append({"guardrail": "G-03", "reason": "not_allowed",
+                               "message": "배차 제약조건에 허용되지 않은 항목이 있습니다."})
     return violations
 
 

@@ -1,17 +1,12 @@
-"""Retry — 설계서 3.2 / 3.2.1 (이슈 #13)
+"""조회 Tool의 일시 오류는 최대 3회 재시도한다. 배차 요청은 자동 재전송하지 않는다.
 
-Tool 은 스스로 재시도하지 않는다. 실행 계층인 #13 이 공통 정책을 적용한다.
-오류는 ToolErrorException.error 의 code·message·retryable 로 전달된다.
-
-v1.3 반영
-  - ToolError·ToolErrorCode·ToolErrorException 은 badaro.schemas(B-03)를 그대로 쓴다.
-  - 429 를 제외한 입력·인증 관련 4xx 는 재시도하지 않는다.
-  - 결과 조회 폴링 횟수와 통신 재시도 횟수를 구분한다.
-  - 배차 요청 재전송은 중복 배차 가능성을 먼저 확인한다.
+TMS 결과 조회의 폴링·통신 재시도는 배차 Tool 내부에서 별도로 제한한다.
 """
 from __future__ import annotations
 
 from typing import Any
+
+import httpx
 
 from badaro.schemas import ToolError, ToolErrorCode, ToolErrorException
 
@@ -64,7 +59,7 @@ def should_retry(exc: BaseException | ToolError) -> bool:
       1. ToolError 가 있으면 retryable 을 따른다.
       2. 상태코드가 408·429·5xx 이면 재시도한다.
       3. 그 외 4xx 는 재시도하지 않는다.
-      4. 상태코드가 없으면 네트워크 오류로 보고 재시도한다.
+      4. 상태코드가 없으면 확인된 네트워크 예외만 재시도한다.
     """
     err = as_tool_error(exc)
     if err is not None:
@@ -72,7 +67,7 @@ def should_retry(exc: BaseException | ToolError) -> bool:
 
     code = extract_status(exc) if isinstance(exc, BaseException) else None
     if code is None:
-        return True
+        return isinstance(exc, (TimeoutError, ConnectionError, httpx.TransportError))
     if code in RETRYABLE_STATUS:
         return True
     if 400 <= code < 500:
@@ -102,8 +97,10 @@ def can_resend(tool_name: str, *, prior_result_found: bool) -> bool:
     return not prior_result_found
 
 
-def retry_hint(exc: BaseException | ToolError) -> str:
+def retry_hint(exc: BaseException | ToolError, *, retries: int = MAX_RETRIES) -> str:
     """재시도를 포기했을 때의 안내문. 원본 키·주소·전화번호를 포함하지 않는다."""
+    if retries == 0:
+        return "요청을 처리하지 못했습니다. 재시도하지 않았습니다."
     err = as_tool_error(exc)
     if err is not None:
         if err.code is ToolErrorCode.RATE_LIMITED:
@@ -167,7 +164,7 @@ def safe_error_text(exc: Any) -> str:
     """오류 문구에서 인증키·전화번호·상세주소를 지운다. 모델과 화면에 그대로 나가지 않게 한다."""
     from ..guardrails.pii import mask_text
     err = as_tool_error(exc)
-    raw = err.message if err is not None else str(exc)
+    raw = err.message if err is not None else "Tool 실행 오류가 발생했습니다"
     return mask_text(raw)
 
 
@@ -175,12 +172,11 @@ def safe_error_text(exc: Any) -> str:
 def tool_retry(request: Any, handler: Any) -> Any:
     """일시 오류만 재시도하고, 실패는 마스킹한 메시지로 돌려준다.
 
-    비멱등 Tool(optimize_dispatch)은 중복 배차 가능성을 확인하기 전까지 재전송하지 않는다.
+    optimize_dispatch는 자동 재전송하지 않는다.
     """
     import time
 
     name = _tool_name(request)
-    state = getattr(request, "state", None) or {}
     attempt = 0
 
     while True:
@@ -189,9 +185,9 @@ def tool_retry(request: Any, handler: Any) -> Any:
         except Exception as exc:
             attempt += 1
             if attempt > MAX_RETRIES or not should_retry(exc):
-                return tool_message(f"{retry_hint(exc)} 사유: {safe_error_text(exc)}",
-                                    _tool_call_id(request))
-            if duplicate_risk(name, state):
+                message = f"{retry_hint(exc, retries=attempt - 1)} 사유: {safe_error_text(exc)}"
+                return tool_message(message, _tool_call_id(request))
+            if requires_duplicate_check(name):
                 return tool_message(
                     "이전 배차 요청이 이미 처리되었을 수 있어 다시 보내지 않았습니다. "
                     f"현재 배차 상태를 확인한 뒤 진행해 주세요. 사유: {safe_error_text(exc)}",

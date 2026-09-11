@@ -155,7 +155,7 @@ def test_TS_09_C03_input_validation_collects_errors_at_once():
 
 def test_TS_09_C04_input_validation_limits_destination_count():
     payload = dict(VALID_REQUEST, destination_ids=[f"S-{i}" for i in range(60)])
-    assert "too_many" in _codes(validate_dispatch_input(payload, now_kst=NOW))
+    assert "too_many" in _codes(validate_dispatch_input(payload, now_kst=NOW, max_destinations=50))
 
 
 def test_TS_09_C05_missing_depot_and_date_are_asked():

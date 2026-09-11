@@ -1,17 +1,4 @@
-"""LoggingMiddleware — 3.2 (이슈 #13 B-13 · 우선순위 P0)
-
-Hook  : wrap_tool_call
-목적  : Tool 호출 이력을 남긴다 — Request ID, Tool명, 성공·실패.
-v2 보완: ⭐ 기록 키를 3.1 request_id 로 확정
-         ⭐ 배차 '확정' 이벤트는 dispatch_audit_log 로 분리 기록
-         ⭐ 전화번호·주소·인증키는 마스킹 (G-05, 심각도 High)
-
-파일 이름이 logging.py 가 아닌 이유:
-  파이썬 표준 라이브러리에 logging 모듈이 있어서, 같은 이름을 쓰면 그걸 가려버린다(shadowing).
-  v2 3.2.1 의 등록 이름도 tool_logging 이라 그대로 맞췄다.
-
-실패 정책 (3.4): fail-open — 로그 기록이 실패해도 배차 업무 자체는 계속 진행한다.
-"""
+"""Tool 실행의 request_id와 성공·실패를 기록한다. 로그 저장 실패는 업무를 중단하지 않는다."""
 from __future__ import annotations
 
 import json
@@ -21,6 +8,7 @@ from typing import Any
 
 from ..guardrails.pii import mask_obj, mask_text
 from ._compat import wrap_tool_call
+from .retry import safe_error_text
 
 _log = _stdlib_logging.getLogger("badaro.tool")
 
@@ -52,11 +40,7 @@ def emit(record: dict[str, Any]) -> None:
 
 
 def write_audit(store: Any, tenant_id: str, record: dict[str, Any]) -> None:
-    """배차 확정·취소만 Store 의 dispatch_audit_log 에 따로 쌓는다 (⭐ v2 분리 기록).
-
-    일반 Tool 로그와 섞으면 나중에 '누가 언제 확정했나'를 찾기 어렵다.
-    화물자동차 운수사업법 제47조의2 운송실적 신고 대응 기반.
-    """
+    """기존 확정·취소 감사 기록 함수. v2 MVP에서는 사용하지 않는다."""
     try:
         from .store import append_audit
         append_audit(store, tenant_id, mask_obj(record))
@@ -73,8 +57,6 @@ def tool_logging(request: Any, handler: Any) -> Any:
     tenant_id = getattr(ctx, "tenant_id", "unknown")
     tool_name = getattr(getattr(request, "tool_call", None), "get", lambda *_: None)("name") \
         or getattr(request, "tool_name", "unknown")
-    args = getattr(request, "tool_call", None)
-    args = args.get("args") if isinstance(args, dict) else None
 
     start = time.monotonic()
     try:
@@ -82,12 +64,13 @@ def tool_logging(request: Any, handler: Any) -> Any:
     except Exception as exc:
         elapsed = int((time.monotonic() - start) * 1000)
         emit(build_log_record(request_id=request_id, tool_name=tool_name, ok=False,
-                              elapsed_ms=elapsed, args=args, error=str(exc)))
+                              elapsed_ms=elapsed, error=safe_error_text(exc)))
         raise
     else:
         elapsed = int((time.monotonic() - start) * 1000)
-        rec = build_log_record(request_id=request_id, tool_name=tool_name, ok=True,
-                               elapsed_ms=elapsed, args=args)
+        ok = getattr(result, "status", None) != "error"
+        rec = build_log_record(request_id=request_id, tool_name=tool_name, ok=ok,
+                               elapsed_ms=elapsed)
         emit(rec)
         if tool_name in AUDIT_TOOLS:
             store = getattr(request, "store", None)

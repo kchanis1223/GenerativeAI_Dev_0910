@@ -15,6 +15,8 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta
 from typing import Any
 
+from pydantic import BaseModel
+
 from ._compat import ai_message, before_agent
 
 MAX_DESTINATIONS = 50
@@ -45,10 +47,17 @@ def _parse_dt(raw: Any) -> datetime | None:
         return None
 
 
-def validate_dispatch_input(payload: dict[str, Any], *,
-                            now_kst: datetime) -> list[dict[str, Any]]:
+def validate_dispatch_input(payload: dict[str, Any] | BaseModel, *,
+                            now_kst: datetime,
+                            max_destinations: int | None = None,
+                            max_vehicles: int | None = None,
+                            max_days_ahead: int | None = None) -> list[dict[str, Any]]:
     """DispatchRequest 입력을 검사해 되물을 항목 목록을 반환한다. 빈 목록이면 통과."""
     issues: list[dict[str, Any]] = []
+    if isinstance(payload, BaseModel):
+        payload = payload.model_dump(mode="json")
+    if not isinstance(payload, dict):
+        return [_issue("request", "bad_type", "배차 요청 형식을 확인해 주세요.")]
 
     if not payload.get("depot_id"):
         issues.append(_issue("depot_id", "missing", "출발 물류센터를 확인하지 못했습니다."))
@@ -66,9 +75,9 @@ def validate_dispatch_input(payload: dict[str, Any], *,
             today = now_kst.date()
             if d < today:
                 issues.append(_issue("delivery_date", "past", f"배송일 {d}은 지난 날짜입니다."))
-            elif d > today + timedelta(days=MAX_DAYS_AHEAD):
+            elif max_days_ahead is not None and d > today + timedelta(days=max_days_ahead):
                 issues.append(_issue("delivery_date", "too_far",
-                                     f"배송일은 오늘부터 {MAX_DAYS_AHEAD}일 이내로 지정해 주세요."))
+                                     f"배송일은 오늘부터 {max_days_ahead}일 이내로 지정해 주세요."))
 
     dests = payload.get("destination_ids")
     if dests is not None:
@@ -79,9 +88,9 @@ def validate_dispatch_input(payload: dict[str, Any], *,
             issues.append(_issue("destination_ids", "empty",
                                  "배송지를 지정하지 않으려면 값을 비우고, "
                                  "지정하려면 지점을 알려주세요."))
-        elif len(dests) > MAX_DESTINATIONS:
+        elif max_destinations is not None and len(dests) > max_destinations:
             issues.append(_issue("destination_ids", "too_many",
-                                 f"배송지가 {len(dests)}건입니다. 상한 {MAX_DESTINATIONS}건이라 "
+                                 f"배송지가 {len(dests)}건입니다. 상한 {max_destinations}건이라 "
                                  f"나눠서 요청해 주세요."))
 
     for fname in _ID_LIST_FIELDS:
@@ -93,9 +102,9 @@ def validate_dispatch_input(payload: dict[str, Any], *,
     if vc is not None:
         if isinstance(vc, bool) or not isinstance(vc, int):
             issues.append(_issue("vehicle_count", "not_int", "차량 수는 정수로 알려주세요."))
-        elif not MIN_VEHICLES <= vc <= MAX_VEHICLES:
+        elif vc < MIN_VEHICLES or (max_vehicles is not None and vc > max_vehicles):
             issues.append(_issue("vehicle_count", "out_of_range",
-                                 f"차량 수는 {MIN_VEHICLES}~{MAX_VEHICLES}대 사이여야 합니다. "
+                                 "차량 수가 허용 범위를 벗어났습니다. "
                                  f"(받은 값: {vc})"))
 
     priority = payload.get("priority")
@@ -118,9 +127,13 @@ def validate_dispatch_input(payload: dict[str, Any], *,
         issues.append(_issue("departure_time", "bad_format", "출발 시각 형식이 올바르지 않습니다."))
     if payload.get("deadline") and dl is None:
         issues.append(_issue("deadline", "bad_format", "마감 시각 형식이 올바르지 않습니다."))
-    if dep and dl and dl <= dep:
-        issues.append(_issue("deadline", "before_departure",
-                             "납품 마감 시각이 출발 시각보다 빠릅니다."))
+    if dep and dl:
+        if (dep.utcoffset() is None) != (dl.utcoffset() is None):
+            issues.append(_issue("deadline", "timezone_mismatch",
+                                 "출발과 마감 시각의 시간대를 함께 지정해 주세요."))
+        elif dl <= dep:
+            issues.append(_issue("deadline", "before_departure",
+                                 "납품 마감 시각이 출발 시각보다 빠릅니다."))
 
     return issues
 
