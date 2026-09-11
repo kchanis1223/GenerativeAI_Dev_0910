@@ -124,15 +124,16 @@ Accept: application/json
 
 실제 응답 예시는 [tms-allocation-data-response.json](./tms-allocation-data-response.json)을 참고한다.
 
-## 배차 미배정 사유 코드
+## 저장 응답 Mock 실행
 
-`DispatchResult.unassigned_orders[*].reason_code`는 아래 고정 문자열을 사용한다.
+`USE_MOCK=1`은 위 B-02 요청을 재생하는 모드다. 앱키가 없어도 동작하며 외부 HTTP를 호출하지 않는다. 다른 주소·주문·차량·출발시각이나 지원하지 않는 API는 저장 응답이 없다는 오류로 중단한다. 이를 실제 주소 검색 실패로 간주하지 않는다.
 
-| 코드 | 의미 |
-|---|---|
-| `not_assigned` | TMS 결과에서 주문이 배정되지 않음 |
-| `incompatible_vehicle` | 차량이 주문 보관유형을 지원하지 않음 |
-| `capacity_exceeded` | 차량별 주문 합계 적재중량 초과 |
-| `volume_exceeded` | 차량별 주문 합계 적재부피 초과 |
-| `deadline_exceeded` | 주문 마감시각을 넘기는 경로 |
-| `unavailable_vehicle` | 가용하지 않은 차량에 배정됨 |
+응답 JSON은 설치된 Python 패키지에서도 사용할 수 있도록 `agent/badaro/tools/mock_responses/`에 포함한다. 원본은 이 폴더의 B-02 기록이며 테스트로 두 사본의 일치를 확인한다. 지오코딩 캐시는 Mock과 실제 모드를 구분한다. `USE_MOCK=0`은 기존 실제 HTTP 경로를 사용한다.
+
+이 PR은 B-02 저장 응답 어댑터다. 기존 CSV의 MVP 시연 주문·차량에 맞는 응답 준비와 Agent 실행 연결은 #17·#19에 남아 있다. CSV 전체가 이 응답으로 배차되는 것은 아니다.
+
+## 배차 미배정과 검증 오류
+
+현재 `DispatchResult.unassigned_orders[*].reason_code`로 반환하는 값은 `not_assigned`다. 요청한 주문이 TMS 경로에 없다는 뜻이며, TMS가 그 원인을 설명했다는 의미는 아니다.
+
+보관유형·중량·부피·마감시간·가용 상태 위반은 정상 미배정 목록으로 바꾸지 않고 `ToolErrorException`의 `upstream_error`로 반환한다. 내부 검사 식별자인 `incompatible_vehicle`, `capacity_exceeded`, `volume_exceeded`, `deadline_exceeded`, `unavailable_vehicle`은 현재 공개 미배정 사유 코드가 아니다.

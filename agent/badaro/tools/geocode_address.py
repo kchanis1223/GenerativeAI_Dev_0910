@@ -19,9 +19,10 @@ from badaro.schemas import (
 )
 
 from ._http import get as http_get
+from ._http import mock_enabled
 
 TMAP_GEOCODE_URL = "https://apis.openapi.sk.com/tmap/geo/fullAddrGeo"
-_CACHE: dict[str, GeocodeResult] = {}
+_CACHE: dict[tuple[bool, str], GeocodeResult] = {}
 
 load_dotenv()
 
@@ -38,17 +39,18 @@ def geocode_address(address: str) -> GeocodeResult:
     if not normalized_address:
         _raise_error(ToolErrorCode.INVALID_INPUT, "주소가 비어 있습니다", retryable=False)
 
-    cached = _CACHE.get(normalized_address)
+    use_mock = mock_enabled()
+    cache_key = (use_mock, normalized_address)
+    cached = _CACHE.get(cache_key)
     if cached is not None:
         return cached
 
     app_key = os.getenv("TMAP_APP_KEY", "").strip()
-    mock_enabled = os.getenv("USE_MOCK", "0").strip() == "1"
-    if not app_key and not mock_enabled:
+    if not app_key and not use_mock:
         _raise_error(
             ToolErrorCode.UNAUTHORIZED, "TMAP_APP_KEY가 설정되지 않았습니다", retryable=False
         )
-    if mock_enabled:
+    if use_mock:
         app_key = "mock"
 
     params = {
@@ -60,7 +62,7 @@ def geocode_address(address: str) -> GeocodeResult:
     }
     response = _request_once(params)
     result = _parse_response(normalized_address, response)
-    _CACHE[normalized_address] = result
+    _CACHE[cache_key] = result
     return result
 
 

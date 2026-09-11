@@ -19,6 +19,7 @@ from badaro.schemas import (
 )
 
 from ._http import get as http_get
+from ._http import mock_enabled
 
 _SEOUL = timezone(timedelta(hours=9))
 
@@ -74,10 +75,10 @@ def execute_optimize_dispatch(
             )
     load_dotenv()
     app_key = os.getenv("TMAP_APP_KEY", "").strip()
-    mock_enabled = os.getenv("USE_MOCK", "0").strip() == "1"
-    if not app_key and not mock_enabled:
+    use_mock = mock_enabled()
+    if not app_key and not use_mock:
         _raise_context_error(ToolErrorCode.UNAUTHORIZED, "TMAP_APP_KEY가 설정되지 않았습니다")
-    if mock_enabled:
+    if use_mock:
         app_key = "mock"
 
     selected_order_ids = [
