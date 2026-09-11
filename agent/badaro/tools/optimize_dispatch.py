@@ -17,6 +17,8 @@ from badaro.schemas import (
     ToolErrorException,
 )
 
+_SEOUL = timezone(timedelta(hours=9))
+
 
 def optimize_dispatch(
     order_ids: list[str],
@@ -75,11 +77,16 @@ def execute_optimize_dispatch(
     if constraints.departure_time is None:
         _raise_context_error(ToolErrorCode.INVALID_INPUT, "배차 시작 시간이 필요합니다")
 
+    departure_time = constraints.departure_time
+    if departure_time.tzinfo is None:
+        departure_time = departure_time.replace(tzinfo=_SEOUL)
+    else:
+        departure_time = departure_time.astimezone(_SEOUL)
     params = {
         "allocationType": "2",
         "orderIdList": ",".join(selected_order_ids),
         "vehicleIdList": ",".join(vehicle_ids),
-        "startTime": constraints.departure_time.strftime("%H%M"),
+        "startTime": departure_time.strftime("%H%M"),
         "optionType": "1",
         "equalizationType": "1",
         "centerReturnYn": "Y",
@@ -98,19 +105,40 @@ def execute_optimize_dispatch(
 
     interval = max(0.0, float(os.getenv("TMS_POLL_INTERVAL_SECONDS", "1")))
     attempts = max(1, int(os.getenv("TMS_POLL_MAX_ATTEMPTS", "30")))
+    last_poll_error: ToolErrorException | None = None
     for attempt in range(attempts):
-        data = _request_json(
-            "https://apis.openapi.sk.com/tms/allocationData",
-            {"mappingKey": mapping_key, "routeYn": "N", "appKey": app_key},
-            phase="poll",
-        )
+        try:
+            data = _request_json(
+                "https://apis.openapi.sk.com/tms/allocationData",
+                {"mappingKey": mapping_key, "routeYn": "N", "appKey": app_key},
+                phase="poll",
+            )
+        except ToolErrorException as exc:
+            last_poll_error = exc
+            if exc.error.code in {
+                ToolErrorCode.TIMEOUT,
+                ToolErrorCode.RATE_LIMITED,
+                ToolErrorCode.UPSTREAM_ERROR,
+            } and attempt + 1 < attempts:
+                time.sleep(interval)
+                continue
+            _raise_context_error(
+                exc.error.code,
+                f"{exc.error.message} (mappingKey={mapping_key})",
+            )
         if str(data.get("resultCode", "")) != "102":
             return _parse_dispatch_result(data, selected_order_ids, runtime_context)
         if attempt + 1 < attempts:
             time.sleep(interval)
 
+    if last_poll_error is not None:
+        _raise_context_error(
+            last_poll_error.error.code,
+            f"{last_poll_error.error.message} (mappingKey={mapping_key})",
+        )
     _raise_context_error(
-        ToolErrorCode.TIMEOUT, "TMS 배차 결과가 제한된 횟수 내에 완료되지 않았습니다"
+        ToolErrorCode.TIMEOUT,
+        f"TMS 배차 결과가 제한된 횟수 내에 완료되지 않았습니다 (mappingKey={mapping_key})",
     )
 
 
@@ -122,25 +150,53 @@ def _parse_dispatch_result(
     routes = []
     assigned: set[str] = set()
     invalid_results: dict[str, str] = {}
+    invalid_codes: dict[str, str] = {}
     for vehicle in data.get("vehicleList", []):
         vehicle_id = str(vehicle.get("vehicleId", ""))
         known_vehicle = context.vehicles.get(vehicle_id)
+        raw_orders = vehicle.get("orderList", [])
+        if not isinstance(raw_orders, list):
+            _raise_context_error(
+                ToolErrorCode.UPSTREAM_ERROR, "TMS orderList 구조가 올바르지 않습니다"
+            )
+        if any(not isinstance(order, dict) for order in raw_orders):
+            _raise_context_error(
+                ToolErrorCode.UPSTREAM_ERROR, "TMS 주문 항목 구조가 올바르지 않습니다"
+            )
+        route_order_ids = [str(order.get("orderId", "")) for order in raw_orders]
+        route_orders = [context.orders.get(order_id) for order_id in route_order_ids]
+        route_reason: str | None = None
+        if known_vehicle is None or not known_vehicle.available:
+            route_reason = "unavailable_vehicle"
+            reason_message = "TMS가 가용하지 않은 차량에 배정했습니다"
+        elif any(order is None for order in route_orders):
+            route_reason = "unknown_order"
+            reason_message = "TMS가 조회되지 않은 주문을 경로에 포함했습니다"
+        elif any(
+            order.storage_type not in known_vehicle.supported_storage_types
+            for order in route_orders
+            if order is not None
+        ):
+            route_reason = "incompatible_vehicle"
+            reason_message = "차량이 주문 보관유형을 지원하지 않습니다"
+        elif (
+            sum(order.weight_kg for order in route_orders if order is not None)
+            > known_vehicle.capacity_weight_kg
+        ):
+            route_reason = "capacity_exceeded"
+            reason_message = "차량별 주문 합계 적재중량을 초과했습니다"
+
+        if route_reason is not None:
+            for order_id in route_order_ids:
+                if order_id in context.orders:
+                    invalid_results[order_id] = reason_message
+                    invalid_codes[order_id] = route_reason
+            continue
+
         stops = []
-        for sequence, order in enumerate(vehicle.get("orderList", []), 1):
+        for sequence, order in enumerate(raw_orders, 1):
             order_id = str(order.get("orderId", ""))
             if not order_id:
-                continue
-            if order_id not in context.orders:
-                continue
-            order_model = context.orders[order_id]
-            if known_vehicle is None or not known_vehicle.available:
-                invalid_results[order_id] = "TMS가 가용하지 않은 차량에 배정했습니다"
-                continue
-            if order_model.storage_type not in known_vehicle.supported_storage_types:
-                invalid_results[order_id] = "차량이 주문 보관유형을 지원하지 않습니다"
-                continue
-            if order_model.weight_kg > known_vehicle.capacity_weight_kg:
-                invalid_results[order_id] = "차량 적재중량을 초과했습니다"
                 continue
             assigned.add(order_id)
             stops.append({
@@ -158,20 +214,20 @@ def _parse_dispatch_result(
     unassigned = [
         {
             "order_id": oid,
-            **({"reason_message": invalid_results[oid]} if oid in invalid_results else {}),
+            **(
+                {
+                    "reason_code": invalid_codes[oid],
+                    "reason_message": invalid_results[oid],
+                }
+                if oid in invalid_results
+                else {"reason_code": "not_assigned"}
+            ),
         }
         for oid in order_ids
         if oid not in assigned
     ]
     status = "failed" if not assigned else ("success" if not unassigned else "partial")
     return DispatchResult(status=status, routes=routes, unassigned_orders=unassigned)
-
-
-def _failed_result(order_ids: list[str], message: str) -> DispatchResult:
-    return DispatchResult(
-        status="failed", routes=[],
-        unassigned_orders=[{"order_id": oid, "reason_message": message} for oid in order_ids],
-    )
 
 
 def _parse_eta(value: object):
