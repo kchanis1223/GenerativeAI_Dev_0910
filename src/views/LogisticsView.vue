@@ -12,22 +12,22 @@ const section = computed(() => String(route.params.section))
 const pages: Record<string, { title: string; intro: string; steps: string[] }> = {
   vehicles: {
     title: '차량 정보 관리',
-    intro: '배송의 시작, 차량과 적재 정보를 준비하세요.',
+    intro: '차량 종류, 적재량, 운행 여부를 등록하세요.',
     steps: ['차량 정보', '배송지 정보', '배차 요청', '결과 확인'],
   },
   orders: {
     title: '배송지 정보 관리',
-    intro: '배송할 장소와 물량을 한곳에서 관리하세요.',
+    intro: '배송지 주소와 배송 물량을 등록하세요.',
     steps: ['차량 정보', '배송지 정보', '배차 요청', '결과 확인'],
   },
   dispatch: {
     title: '배차 요청하기',
-    intro: '준비된 정보를 연결해 배송 흐름을 그려보세요.',
+    intro: '투입 차량과 배송지를 선택하고 배차 조건을 설정하세요.',
     steps: ['차량 정보', '배송지 정보', '배차 요청', '결과 확인'],
   },
   api: {
     title: 'API 살펴보기',
-    intro: '요청부터 응답까지, 물류 데이터가 움직이는 과정.',
+    intro: 'API별 요청 항목과 목업 응답을 확인하세요.',
     steps: ['API 선택', '요청 구성', '목업 실행', '응답 확인'],
   },
 }
@@ -110,7 +110,7 @@ const latest = computed(() => tmsLogs[0])
       </div>
     </main>
     <footer class="logistics-footer">
-      <RouterLink to="/">Badaro</RouterLink><span>물류의 흐름을, 바다로.</span
+      <RouterLink to="/">Badaro</RouterLink><span>센터·차량·배송지·배차 관리</span
       ><small>SK TMS Open API · 프론트엔드 데모</small>
     </footer>
   </div>
