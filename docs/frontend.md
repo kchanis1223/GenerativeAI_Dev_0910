@@ -71,7 +71,7 @@ src/services/tms-mock.ts                명세 기반 CRUD·배차 목업
 src/style.css                          전역 폰트·청록색 반응형 스타일
 ```
 
-바다로 로고는 `src/asset/badaro-logo.png`의 투명 PNG를 사용합니다. 기존 물 표면 사진·글꼴 등 원본 에셋도 보관합니다.
+바다로 로고는 `src/asset/badaro-logo.png`의 투명 PNG를 사용합니다. 화면에서 사용하는 물 표면 사진과 글꼴을 보관합니다. JayeonSans는 WOFF2 형식만 사용합니다.
 
 ## 검증
 
