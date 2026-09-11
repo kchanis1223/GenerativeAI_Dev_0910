@@ -25,7 +25,9 @@ include = ["badaro*", "prompts*"]
 
 [tool.setuptools.package-data]
 prompts = ["*.md"]
+badaro = ["data/*.csv"]
 "badaro.tools" = ["mock_responses/*.json"]
+"badaro.runtime" = ["demo.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
