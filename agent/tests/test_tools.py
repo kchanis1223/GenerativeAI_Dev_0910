@@ -1,5 +1,5 @@
 import inspect
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 
@@ -234,13 +234,19 @@ def test_execute_optimize_dispatch_requests_and_polls_tms(monkeypatch) -> None:
 
     monkeypatch.setenv("TMAP_APP_KEY", "test-key")
     monkeypatch.setenv("TMS_POLL_INTERVAL_SECONDS", "0")
-    monkeypatch.setattr(module.httpx, "get", lambda *args, **kwargs: Response())
+    calls = []
+
+    def fake_get(*args, **kwargs):
+        calls.append(kwargs["params"])
+        return Response()
+
+    monkeypatch.setattr(module.httpx, "get", fake_get)
     result = execute_optimize_dispatch(
         ["ORDER-001"],
         ["VEHICLE-001"],
         DispatchConstraints(
             priority=Priority.NORMAL,
-            departure_time=datetime(2026, 9, 11, 5, 0),
+            departure_time=datetime(2026, 9, 10, 20, 0, tzinfo=timezone.utc),
         ),
         context,
     )
@@ -248,3 +254,69 @@ def test_execute_optimize_dispatch_requests_and_polls_tms(monkeypatch) -> None:
     assert result.status.value == "success"
     assert result.routes[0].stops[0].destination_id == "STORE-001"
     assert result.routes[0].distance_meters == 19423
+    assert calls[0]["startTime"] == "0500"
+
+
+def test_execute_optimize_dispatch_retries_transient_poll_only(monkeypatch) -> None:
+    import importlib
+
+    module = importlib.import_module("badaro.tools.optimize_dispatch")
+    context = _context_with_delivery_geocode(
+        {
+            "서울시 중구 세종대로 1": GeocodeResult(
+                status=GeocodeStatus.OK,
+                input_address="서울시 중구 세종대로 1",
+                candidates=[GeocodeCandidate(matched_address="주소", lat=37.5, lon=126.9)],
+            )
+        }
+    )
+    responses = iter([
+        (200, {"resultCode": "200", "mappingKey": "map-1"}),
+        (503, {}),
+        (200, {"resultCode": "200", "vehicleList": []}),
+    ])
+
+    def fake_get(*args, **kwargs):
+        status, payload = next(responses)
+        return type("Response", (), {"status_code": status, "json": lambda self: payload})()
+
+    monkeypatch.setenv("TMAP_APP_KEY", "test-key")
+    monkeypatch.setenv("TMS_POLL_INTERVAL_SECONDS", "0")
+    monkeypatch.setenv("TMS_POLL_MAX_ATTEMPTS", "2")
+    monkeypatch.setattr(module.httpx, "get", fake_get)
+    result = execute_optimize_dispatch(
+        ["ORDER-001"],
+        ["VEHICLE-001"],
+        DispatchConstraints(priority=Priority.NORMAL, departure_time=datetime(2026, 9, 11, 5)),
+        context,
+    )
+
+    assert result.status.value == "failed"
+
+
+def test_dispatch_rejects_vehicle_route_when_total_weight_exceeds_capacity() -> None:
+    from badaro.tools.optimize_dispatch import _parse_dispatch_result
+
+    context = _context_with_delivery_geocode({})
+    context.orders["ORDER-002"] = context.orders["ORDER-001"].model_copy(
+        update={"order_id": "ORDER-002", "weight_kg": 1000}
+    )
+    context.vehicles["VEHICLE-001"] = context.vehicles["VEHICLE-001"].model_copy(
+        update={"capacity_weight_kg": 1000}
+    )
+
+    result = _parse_dispatch_result(
+        {
+            "resultCode": "200",
+            "vehicleList": [{
+                "vehicleId": "VEHICLE-001",
+                "orderList": [{"orderId": "ORDER-001"}, {"orderId": "ORDER-002"}],
+            }],
+        },
+        ["ORDER-001", "ORDER-002"],
+        context,
+    )
+
+    assert result.status.value == "failed"
+    assert result.routes == []
+    assert {item.reason_code for item in result.unassigned_orders} == {"capacity_exceeded"}
