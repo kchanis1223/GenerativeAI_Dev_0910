@@ -95,6 +95,16 @@ class Vehicle(BaseModel):
 
     @model_validator(mode="after")
     def validate_shift(self) -> "Vehicle":
+        start_is_timezone_aware = (
+            self.shift_start.tzinfo is not None and self.shift_start.utcoffset() is not None
+        )
+        end_is_timezone_aware = (
+            self.shift_end.tzinfo is not None and self.shift_end.utcoffset() is not None
+        )
+        if start_is_timezone_aware != end_is_timezone_aware:
+            raise ValueError(
+                "shift_start and shift_end must both include a timezone or both omit it"
+            )
         if self.shift_end < self.shift_start:
             raise ValueError("shift_end must be greater than or equal to shift_start")
         return self
@@ -132,8 +142,8 @@ class GeocodeResult(BaseModel):
             raise ValueError("status=ok requires exactly one candidate")
         if self.status is GeocodeStatus.NOT_FOUND and candidate_count != 0:
             raise ValueError("status=not_found requires no candidates")
-        if self.status is GeocodeStatus.AMBIGUOUS and candidate_count < 2:
-            raise ValueError("status=ambiguous requires at least two candidates")
+        if self.status is GeocodeStatus.AMBIGUOUS and candidate_count < 1:
+            raise ValueError("status=ambiguous requires at least one candidate")
         return self
 
 
