@@ -7,7 +7,7 @@
 ## 지오코딩
 
 - Nominatim 저장 응답: 지점 **20/20**, 센터 **1/1**이 도로명·건물번호·구·도시·국가·좌표까지 일치합니다.
-- 원본 조회 시각: 2026-09-11 00:39:14~~00:40:41 UTC (09:39~~09:40 KST).
+- 원본 조회 시각: 2026-09-11 00:39:14–00:40:41 UTC (09:39–09:40 KST).
 - 성공 기준: HTTP 200, `place_rank=30`, 입력 주소 일치. 이번 검증에서 API를 재호출하지 않았습니다.
 - TMAP 실호출 검증이 아니며 건물 대표 좌표가 차량 출입구·정차 위치를 보장하지 않습니다.
 
@@ -41,9 +41,10 @@
 
 ## Python 호환 여부
 
-검증 대상은 [PR #29](https://github.com/kchanis1223/GenerativeAI_Dev_0910/pull/29)의
-커밋 `5a8a8e76401a75289ce6886bf8d23c9b25b136bd`, `agent/badaro/schemas/models.py`입니다.
-현재 main에는 모델 구현이 없으므로 해당 파일만 별도로 로드했습니다.
+검증 대상은 [PR #29](https://github.com/kchanis1223/GenerativeAI_Dev_0910/pull/29)가 병합된
+main 커밋 `598e290a00cde6b5351b548a424166846f76bd99`의 `agent/badaro/schemas/models.py`입니다.
+PR #33의 검증 코드로 이 모델과 PR #32의 CSV를 다시 검사해 아래 결과가 일치함을 확인했습니다.
+같은 모델을 지정한 `tests/test_sample_data.py` 테스트 11개도 통과했습니다.
 
 | 입력                     | Order      | Vehicle  | 판정                                |
 | ------------------------ | ---------- | -------- | ----------------------------------- |
@@ -72,8 +73,8 @@
 저장소 루트에서 실행합니다. 네트워크는 고정 모델 커밋을 가져오는 Git fetch에만 사용합니다.
 
 ```sh
-git fetch origin 5a8a8e76401a75289ce6886bf8d23c9b25b136bd
-git show 5a8a8e76401a75289ce6886bf8d23c9b25b136bd:agent/badaro/schemas/models.py > /tmp/badaro-b03-models.py
+git fetch origin 598e290a00cde6b5351b548a424166846f76bd99
+git show 598e290a00cde6b5351b548a424166846f76bd99:agent/badaro/schemas/models.py > /tmp/badaro-b03-models.py
 cd agent
 python -m pip install -r requirements.txt
 python data/validate_samples.py --models /tmp/badaro-b03-models.py

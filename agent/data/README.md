@@ -21,7 +21,7 @@ UTF-8 BOM·쉼표 구분 CSV입니다. `vehicleType`과 `openTime`·`closeTime`�
 
 원본은 기존 Vue/TMS 필드명을 유지합니다. Python 모델에 CSV 행을 그대로 전달하면
 검증에 실패합니다. [호환성·주소 검증 결과](validation-report.md)의 필드 매핑이 필요합니다.
-PR #29의 `Order`·`Vehicle` 모델을 고정 커밋에서 가져와 변환한 40건·5대를 검증합니다.
+PR #29가 병합된 main의 `Order`·`Vehicle` 모델을 고정 커밋에서 가져와 변환한 40건·5대를 검증합니다.
 `get_delivery_orders`와 `get_available_vehicles`의 조회 로직 연결은 #10의 범위입니다.
 
 - 주문 `priority=normal`을 명시했습니다. 차량 근무시간은 샘플 가정인
@@ -47,7 +47,3 @@ TMAP API 성공이나 차량 출입구 좌표 검증을 뜻하지 않습니다.
 
 검증 코드 PR의 `agent/data/validate_samples.py`와 `agent/tests/test_sample_data.py`를
 함께 적용합니다. 실행 명령과 모델 커밋은 검증 결과 문서에 기록합니다.
-
-검증 코드 적용 후 루트에서 `npm run test:data`로 데이터·주소 근거를 검사합니다
-(Python 3.11 이상, 기본 검사는 표준 라이브러리만 사용). Python 모델 검증은 별도로
-Pydantic을 설치한 환경에서 `--models`를 지정해야 하며, 기본 명령은 모델 검증 미실행을 알립니다.
