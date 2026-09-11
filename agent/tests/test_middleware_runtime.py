@@ -78,7 +78,12 @@ def test_real_agent_stops_on_state_load_failure(monkeypatch):
     assert "불러오지 못했습니다" in result["messages"][-1].content
 
 
-def test_real_tool_retry_does_not_resend_dispatch_and_masks_error(monkeypatch):
+def test_real_tool_retry_does_not_resend_dispatch_and_masks_error(monkeypatch, caplog):
+    import logging
+
+    from badaro.middleware import tool_logging
+
+    caplog.set_level(logging.INFO, logger="badaro.tool")
     monkeypatch.setattr("badaro.middleware.retry.DUPLICATE_CHECKER", lambda *_: False)
     calls = []
 
@@ -93,7 +98,8 @@ def test_real_tool_retry_does_not_resend_dispatch_and_masks_error(monkeypatch):
         AIMessage(content="", tool_calls=[{"name": "optimize_dispatch", "args": {}, "id": "1"}]),
         AIMessage(content="배차 실패"),
     ])
-    result = create_agent(model, tools=[optimize_dispatch], middleware=[build_tool_retry()]).invoke(
+    result = create_agent(model, tools=[optimize_dispatch],
+                          middleware=[tool_logging, build_tool_retry()]).invoke(
         {"messages": [("user", "배차해줘")]}
     )
     assert calls == [1]
@@ -101,3 +107,6 @@ def test_real_tool_retry_does_not_resend_dispatch_and_masks_error(monkeypatch):
 
     errors = [msg for msg in result["messages"] if getattr(msg, "type", None) == "tool"]
     assert errors[0].status == "error"
+    assert "test-secret" not in caplog.text
+    assert '"ok": false' in caplog.text
+    assert '"args"' not in caplog.text
