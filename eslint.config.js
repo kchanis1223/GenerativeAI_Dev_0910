@@ -5,7 +5,16 @@ import vueParser from 'vue-eslint-parser'
 import prettier from 'eslint-config-prettier'
 
 export default tseslint.config(
-  { ignores: ['dist/**', 'node_modules/**', 'test-results/**', 'playwright-report/**'] },
+  {
+    ignores: [
+      'dist/**',
+      'node_modules/**',
+      'test-results/**',
+      'playwright-report/**',
+      '**/.venv/**',
+      '**/venv/**',
+    ],
+  },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   ...vue.configs['flat/recommended'],
