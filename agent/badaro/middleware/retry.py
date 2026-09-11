@@ -15,6 +15,8 @@ from typing import Any
 
 from badaro.schemas import ToolError, ToolErrorCode, ToolErrorException
 
+from ._compat import tool_message, wrap_tool_call
+
 MAX_RETRIES = 3
 BACKOFF_FACTOR = 2.0
 
@@ -124,13 +126,74 @@ def retry_hint(exc: BaseException | ToolError) -> str:
 
 
 def build_tool_retry() -> Any:
-    """내장 ToolRetryMiddleware 를 구성한다. langchain 미설치 시 None."""
-    try:
-        from langchain.agents.middleware import ToolRetryMiddleware
-    except ImportError:
-        return None
-    return ToolRetryMiddleware(
-        max_retries=MAX_RETRIES,
-        backoff_factor=BACKOFF_FACTOR,
-        retry_on=should_retry,
-    )
+    """등록할 재시도 미들웨어를 돌려준다.
+
+    내장 ToolRetryMiddleware 는 중복 배차 확인과 오류 마스킹을 하지 않으므로
+    이 계층의 tool_retry 를 사용한다.
+    """
+    return tool_retry
+
+
+DUPLICATE_CHECKER: Any = None
+
+
+def _tool_name(request: Any) -> str:
+    """Tool 호출 요청에서 도구 이름을 꺼낸다. 라이브러리 구조 차이를 흡수한다."""
+    call = getattr(request, "tool_call", None)
+    if isinstance(call, dict) and call.get("name"):
+        return str(call["name"])
+    return str(getattr(request, "tool_name", "unknown"))
+
+
+def _tool_call_id(request: Any) -> str | None:
+    call = getattr(request, "tool_call", None)
+    return call.get("id") if isinstance(call, dict) else None
+
+
+def duplicate_risk(tool_name: str, state: Any) -> bool:
+    """재전송이 중복 배차를 만들 수 있는가.
+
+    확인 수단이 없으면 위험으로 본다. 중복 배차는 되돌릴 수 없으므로 fail-closed 로 처리한다.
+    #17 이 조회 함수를 DUPLICATE_CHECKER 에 연결하면 그 결과를 따른다.
+    """
+    if not requires_duplicate_check(tool_name):
+        return False
+    if DUPLICATE_CHECKER is None:
+        return True
+    return bool(DUPLICATE_CHECKER(tool_name, state))
+
+
+def safe_error_text(exc: Any) -> str:
+    """오류 문구에서 인증키·전화번호·상세주소를 지운다. 모델과 화면에 그대로 나가지 않게 한다."""
+    from ..guardrails.pii import mask_text
+    err = as_tool_error(exc)
+    raw = err.message if err is not None else str(exc)
+    return mask_text(raw)
+
+
+@wrap_tool_call
+def tool_retry(request: Any, handler: Any) -> Any:
+    """일시 오류만 재시도하고, 실패는 마스킹한 메시지로 돌려준다.
+
+    비멱등 Tool(optimize_dispatch)은 중복 배차 가능성을 확인하기 전까지 재전송하지 않는다.
+    """
+    import time
+
+    name = _tool_name(request)
+    state = getattr(request, "state", None) or {}
+    attempt = 0
+
+    while True:
+        try:
+            return handler(request)
+        except Exception as exc:
+            attempt += 1
+            if attempt > MAX_RETRIES or not should_retry(exc):
+                return tool_message(f"{retry_hint(exc)} 사유: {safe_error_text(exc)}",
+                                    _tool_call_id(request))
+            if duplicate_risk(name, state):
+                return tool_message(
+                    "이전 배차 요청이 이미 처리되었을 수 있어 다시 보내지 않았습니다. "
+                    f"현재 배차 상태를 확인한 뒤 진행해 주세요. 사유: {safe_error_text(exc)}",
+                    _tool_call_id(request))
+            time.sleep(backoff_delay(attempt))

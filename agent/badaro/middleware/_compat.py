@@ -37,3 +37,12 @@ def ai_message(text: str) -> Any:
         return AIMessage(content=text)
     except ImportError:
         return {"role": "assistant", "content": text}
+
+
+def tool_message(text: str, tool_call_id: str | None = None) -> Any:
+    """ToolMessage 를 만든다. langchain 이 없으면 dict 로 대체한다."""
+    try:
+        from langchain_core.messages import ToolMessage
+        return ToolMessage(content=text, tool_call_id=tool_call_id or "unknown")
+    except ImportError:
+        return {"role": "tool", "content": text, "tool_call_id": tool_call_id}
