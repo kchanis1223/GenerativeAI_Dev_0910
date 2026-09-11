@@ -2,6 +2,7 @@
 
 import csv
 from datetime import date, datetime, time, timedelta, timezone
+from functools import wraps
 from pathlib import Path
 
 from badaro.schemas import (
@@ -23,6 +24,21 @@ _STORAGE_TYPES = {
     "냉동": StorageType.FROZEN,
     "일반": StorageType.AMBIENT,
 }
+
+
+def _data_errors(function):
+    """CSV 읽기와 모델 변환 실패를 공통 Tool 오류로 전달한다."""
+    @wraps(function)
+    def wrapped(*args, **kwargs):
+        try:
+            return function(*args, **kwargs)
+        except (OSError, UnicodeError, csv.Error, KeyError, ValueError, TypeError) as exc:
+            raise ToolErrorException(ToolError(
+                code=ToolErrorCode.INTERNAL_ERROR,
+                message="샘플 데이터의 파일과 필드 형식을 확인해 주세요",
+                retryable=False,
+            )) from exc
+    return wrapped
 
 
 def _rows(filename: str) -> list[dict[str, str]]:
@@ -58,6 +74,7 @@ def _storage(value: str) -> StorageType:
         raise ValueError(f"지원하지 않는 품목 유형입니다: {value}") from exc
 
 
+@_data_errors
 def load_orders(
     depot_id: str,
     delivery_date: date,
@@ -65,6 +82,8 @@ def load_orders(
     product_names: list[str] | None,
 ) -> list[Order]:
     """센터·배송일·지점·품목 조건으로 샘플 주문을 조회한다."""
+    if destination_ids == []:
+        return []
     requested_destinations = set(destination_ids or [])
     requested_products = {name.casefold() for name in (product_names or [])}
     result: list[Order] = []
@@ -101,6 +120,7 @@ def load_orders(
     return result
 
 
+@_data_errors
 def load_vehicles(
     depot_id: str,
     delivery_date: date,
@@ -120,7 +140,7 @@ def load_vehicles(
         supported = [
             _storage(item)
             for item in row["supportedItemTypes"].replace("·", ",").replace("|", ",").split(",")
-            if item.strip() in _STORAGE_TYPES
+            if item.strip()
         ]
         result.append(
             Vehicle(
