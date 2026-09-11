@@ -1,0 +1,97 @@
+{
+  "source": "합성 시연 데이터. 좌표는 기존 CSV이며 실제 TMAP/TMS 응답이 아님. ETA·거리 미제공.",
+  "order_ids": [
+    "ORD-20260911-001",
+    "ORD-20260911-002",
+    "ORD-20260911-003",
+    "ORD-20260911-004",
+    "ORD-20260911-005",
+    "ORD-20260911-006"
+  ],
+  "vehicle_ids": [
+    "LIVE01",
+    "LIVE02",
+    "COLD01",
+    "COLD02",
+    "GENERAL01"
+  ],
+  "departure_time": "2026-09-11T06:00:00+09:00",
+  "geocodes": {
+    "서울특별시 마포구 월드컵로 212": {
+      "status": "ok",
+      "input_address": "서울특별시 마포구 월드컵로 212",
+      "candidates": [
+        {
+          "matched_address": "서울특별시 마포구 월드컵로 212",
+          "lat": 37.5663245,
+          "lon": 126.901491
+        }
+      ]
+    },
+    "서울특별시 서대문구 연희로 248": {
+      "status": "ok",
+      "input_address": "서울특별시 서대문구 연희로 248",
+      "candidates": [
+        {
+          "matched_address": "서울특별시 서대문구 연희로 248",
+          "lat": 37.579182,
+          "lon": 126.9367984
+        }
+      ]
+    },
+    "서울특별시 은평구 은평로 195": {
+      "status": "ok",
+      "input_address": "서울특별시 은평구 은평로 195",
+      "candidates": [
+        {
+          "matched_address": "서울특별시 은평구 은평로 195",
+          "lat": 37.6024668,
+          "lon": 126.9288202
+        }
+      ]
+    }
+  },
+  "response": {
+    "resultCode": "200",
+    "vehicleList": [
+      {
+        "vehicleId": "LIVE01",
+        "orderList": [
+          {
+            "orderId": "ORD-20260911-001"
+          }
+        ]
+      },
+      {
+        "vehicleId": "COLD01",
+        "orderList": [
+          {
+            "orderId": "ORD-20260911-002"
+          },
+          {
+            "orderId": "ORD-20260911-003"
+          }
+        ]
+      },
+      {
+        "vehicleId": "COLD02",
+        "orderList": [
+          {
+            "orderId": "ORD-20260911-005"
+          },
+          {
+            "orderId": "ORD-20260911-004"
+          }
+        ]
+      },
+      {
+        "vehicleId": "GENERAL01",
+        "orderList": [
+          {
+            "orderId": "ORD-20260911-006"
+          }
+        ]
+      }
+    ]
+  }
+}
