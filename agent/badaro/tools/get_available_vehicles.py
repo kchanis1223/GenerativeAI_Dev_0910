@@ -4,6 +4,8 @@ from datetime import date
 
 from badaro.schemas import Vehicle
 
+from ._sample_data import load_vehicles
+
 
 def get_available_vehicles(
     depot_id: str,
@@ -16,4 +18,4 @@ def get_available_vehicles(
     조회 실패 시 Tool 실행 계층이 ``ToolError.retryable``을 기준으로
     제한적으로 재시도하고, 최종 실패를 사용자에게 전달한다.
     """
-    raise NotImplementedError
+    return load_vehicles(depot_id, delivery_date, vehicle_count, excluded_vehicle_ids)
