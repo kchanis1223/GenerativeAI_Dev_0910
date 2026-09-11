@@ -26,6 +26,12 @@ from badaro.tools import (
 from badaro.tools.optimize_dispatch import execute_optimize_dispatch
 
 
+@pytest.fixture(autouse=True)
+def disable_mock_for_http_unit_tests(monkeypatch) -> None:
+    """HTTP 모킹 테스트는 개별 응답을 검증하므로 공통 Mock fixture를 끈다."""
+    monkeypatch.setenv("USE_MOCK", "0")
+
+
 @pytest.mark.parametrize(
     ("tool", "parameters"),
     [

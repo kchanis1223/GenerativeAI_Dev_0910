@@ -18,6 +18,8 @@ from badaro.schemas import (
     ToolErrorException,
 )
 
+from ._http import get as http_get
+
 TMAP_GEOCODE_URL = "https://apis.openapi.sk.com/tmap/geo/fullAddrGeo"
 _CACHE: dict[str, GeocodeResult] = {}
 
@@ -41,10 +43,13 @@ def geocode_address(address: str) -> GeocodeResult:
         return cached
 
     app_key = os.getenv("TMAP_APP_KEY", "").strip()
-    if not app_key:
+    mock_enabled = os.getenv("USE_MOCK", "0").strip() == "1"
+    if not app_key and not mock_enabled:
         _raise_error(
             ToolErrorCode.UNAUTHORIZED, "TMAP_APP_KEY가 설정되지 않았습니다", retryable=False
         )
+    if mock_enabled:
+        app_key = "mock"
 
     params = {
         "version": "1",
@@ -68,7 +73,7 @@ def clear_geocode_cache() -> None:
 def _request_once(params: dict[str, str]) -> dict[str, Any]:
     """단일 HTTP 호출. 재시도는 공통 실행 계층(#13)이 담당한다."""
     try:
-        response = httpx.get(TMAP_GEOCODE_URL, params=params, timeout=10.0)
+        response = http_get(TMAP_GEOCODE_URL, params=params, timeout=10.0)
     except httpx.TimeoutException as exc:
         _raise_error(ToolErrorCode.TIMEOUT, "TMAP 지오코딩 요청 시간이 초과되었습니다", True)
         raise AssertionError("unreachable") from exc

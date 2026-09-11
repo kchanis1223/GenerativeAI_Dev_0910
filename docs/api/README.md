@@ -123,3 +123,16 @@ Accept: application/json
 단위는 [공식 배차 결과 응답 설명](https://tms-skopenapi.readme.io/reference/배차결과요청-샘플예제)을 기준으로 정리했다. `processTime`의 단위는 이번 확인에서 확정하지 않았으므로 주행 시간이나 작업 시간으로 사용하지 않는다.
 
 실제 응답 예시는 [tms-allocation-data-response.json](./tms-allocation-data-response.json)을 참고한다.
+
+## 배차 미배정 사유 코드
+
+`DispatchResult.unassigned_orders[*].reason_code`는 아래 고정 문자열을 사용한다.
+
+| 코드 | 의미 |
+|---|---|
+| `not_assigned` | TMS 결과에서 주문이 배정되지 않음 |
+| `incompatible_vehicle` | 차량이 주문 보관유형을 지원하지 않음 |
+| `capacity_exceeded` | 차량별 주문 합계 적재중량 초과 |
+| `volume_exceeded` | 차량별 주문 합계 적재부피 초과 |
+| `deadline_exceeded` | 주문 마감시각을 넘기는 경로 |
+| `unavailable_vehicle` | 가용하지 않은 차량에 배정됨 |
