@@ -2,7 +2,7 @@
 
 바다로는 횟집 체인 본부의 물류 담당자를 위한 배차 지원 서비스입니다. 자연어 요청에서 배송 조건을 추출하고, 주문과 차량 정보를 확인해 TMAP TMS에 배차를 요청하도록 개발하고 있습니다. 활어 운송 시간, 차량 적재량, 지점별 납품시간을 고려합니다.
 
-현재는 Vue 화면에서 목업 데이터로 센터·차량·배송지를 관리하고 배차 결과를 조회할 수 있습니다. Python 에이전트는 개발 폴더와 설치 환경을 준비했으며, 자연어 처리와 실제 배차 API 연결은 개발 예정입니다.
+현재는 Vue 화면에서 목업 데이터로 센터·차량·배송지를 관리하고 배차 결과를 조회할 수 있습니다. Python Agent는 요청 구조화·재질문·Tool 실행·결과 반환과 로컬 API를 제공합니다. Vue에서 이 API를 호출하는 연결은 #15에 남아 있습니다. 키 없는 합성 Mock 시연과 실제 외부 API 검증을 구분합니다.
 
 > SKALA 생성형 AI 서비스 개발(LangChain) 종합실습 · 5층 6반 3조
 
@@ -17,16 +17,16 @@ flowchart LR
   T --> G[주소 → 좌표<br/>TMAP]
   G --> D[배차 최적화<br/>TMAP TMS]
   D --> V[결과 검증]
-  V --> R[차량별 계획 설명]
+  V --> R[검증된 결과 표시]
 ```
 
-LLM은 해석·구조화·설명만 합니다. 차량 배정과 방문 순서는 TMS 결과를 그대로 쓰고, TMS가 주지 않은 값은 만들지 않습니다.
+LLM은 요청 해석·구조화와 Tool 선택을 수행합니다. 검증된 배차 결과는 고정 형식으로 반환합니다. 차량 배정과 방문 순서는 TMS 결과를 그대로 쓰고, TMS가 주지 않은 값은 만들지 않습니다.
 
 ## 구성
 
 | 구성 | 위치 | 설명 |
 |---|---|---|
-| 에이전트 (Python · LangChain) | `agent/` | 패키지·개발 환경 준비. 자연어 처리와 Tool 통합은 개발 예정 |
+| 에이전트 (Python · LangChain) | `agent/` | LangChain Tool 통합, 요청별 State, 로컬 JSON API |
 | 화면 (Vue 3 · Vite) | `src/` | 센터·차량·배송지 관리, 배차 요청·결과, API 탐색. TMS 목업 내장 |
 | 문서 | `docs/` | 설계서, [TMS API 명세 정리](docs/tms-api.md), [프론트 가이드](docs/frontend.md) |
 
@@ -52,7 +52,14 @@ python -m ruff check .
 USE_MOCK=1 python -m pytest
 ```
 
-현재 에이전트 테스트는 키 없이 패키지를 import하는 준비 단계만 검증합니다. 자연어 배차 실행은 B-17 통합 이후 제공하며, `USE_MOCK` 전환과 `.env` 로딩도 해당 구현에서 연결합니다. 프론트 목업은 지금 실행할 수 있습니다.
+키 없는 통합 시연:
+
+```sh
+USE_MOCK=1 MODEL_MODE=offline python -m badaro.agent '2026-09-11 마포 서대문 은평 배차해줘'
+USE_MOCK=1 MODEL_MODE=offline python -m badaro.server --port 8000
+```
+
+`offline`은 제한된 입력 예시를 처리하는 대체 모델이며 실제 LLM이 아닙니다. 합성 배차 응답에는 ETA·거리가 없고 이를 임의로 채우지 않습니다. 설정·OpenAI 모드·API 응답 형식은 [Agent 실행 안내](docs/agent-integration.md)를 참고하세요.
 
 의존성은 `agent/pyproject.toml`에서 관리합니다. `requirements.txt`는 개발 도구를 포함한 패키지 설치 진입점입니다. 모델명은 설계서의 미확정 항목이므로 `.env.example`에서 비워 두었습니다.
 
@@ -82,7 +89,7 @@ notebooks/             # 개인 실험, notebooks/본인이름/ 사용
 .github/               # CI·CODEOWNERS·PR 템플릿
 ```
 
-[설계서 v1.3](docs/6반_3조_설계서_v1.3.docx)는 B-03의 요청·결과 모델, Tool 공개 입력, 서버 내부 실행과 State 저장 기준을 반영한 개정본입니다. [v1.2](docs/6반_3조_설계서_v1.2.docx)의 미들웨어·가드레일 기준을 유지하며 이전 개정본과 초안도 보관합니다. 실제 API·State·Agent 연결은 후속 구현입니다. [설계서와 코드의 대응 및 미확정 사항](docs/README.md)을 함께 확인하세요.
+[설계서 v1.3](docs/6반_3조_설계서_v1.3.docx)는 B-03의 요청·결과 모델, Tool 공개 입력, 서버 내부 실행과 State 저장 기준을 반영한 개정본입니다. [v1.2](docs/6반_3조_설계서_v1.2.docx)의 미들웨어·가드레일 기준을 유지하며 이전 개정본과 초안도 보관합니다. 현재 MVP 범위는 [설계서 v2](docs/6반_3조_설계서_v2.docx)와 [Agent 실행 안내](docs/agent-integration.md)를 따릅니다. 실제 API 전체 시나리오 검증은 남아 있습니다. [설계서와 코드의 대응 및 미확정 사항](docs/README.md)을 함께 확인하세요.
 
 CI는 프론트 lint·단위 테스트·build와 에이전트 Ruff·문법·import 테스트를 실행합니다. Python 업무 시나리오가 추가되면 같은 pytest 작업에서 실행됩니다. 브라우저 검증은 [프론트 가이드](docs/frontend.md)의 별도 명령을 사용합니다.
 
