@@ -1,31 +1,49 @@
-"""DispatchContextMiddleware — 3.2 (이슈 #12 B-12 · 우선순위 P0)
+"""DispatchContext — 설계서 3.2 (이슈 #12)
 
-Hook  : before_model (모델 호출 전, 매 iteration)
-목적  : State 의 현재 배차 조건을 '필요한 만큼만' 프롬프트에 주입한다.
-v2 보완: 20개 지점 전체를 매 turn 반복 주입하지 않고 **요약 + 참조 ID**로 전달 (설계서 1.5 성능)
+State 의 현재 배차 조건을 필요한 만큼만 프롬프트에 주입한다.
+지점 전체 목록을 매 turn 반복 주입하지 않고 요약과 참조 ID 로 전달한다.
 
-왜 요약인가:
-  배송지 20건을 매 turn 통째로 넣으면 재배차를 5번만 해도 같은 목록이 5번 들어간다.
-  목록 원본은 State 에 그대로 두고, 모델에는 "20건 있고 ref 는 이것" 만 알려준 뒤
-  실제 내용이 필요하면 Tool 로 조회하게 한다.
+v1.3 반영: DispatchRequest 필드는 depot_id, destination_ids, delivery_date, vehicle_count,
+           storage_types, deadline 등이다. destination_ids 가 null 이면 조회 범위 미지정이다.
+
+State 가 없는 신규 요청과 저장소 조회 실패를 구분한다.
+조회 실패 상태에서 기존 조건을 전제한 재배차는 중단한다.
 """
 from __future__ import annotations
 
 import hashlib
-from typing import Any
+from typing import Any, Literal
 
-from ._compat import before_model
+from ._compat import ai_message, before_model
+
+STATE_LOAD_ERROR_KEY = "state_load_error"
+
+ContextMode = Literal["new", "resume", "load_failed"]
 
 _STORAGE_LABEL = {
-    "live_fish": "활어", "chilled": "냉장", "frozen": "냉동", "normal": "일반",
+    "live": "활어", "refrigerated": "냉장", "frozen": "냉동", "ambient": "일반",
 }
+
+LOAD_FAILED_MESSAGE = (
+    "이전 배차 조건을 불러오지 못했습니다. 기존 조건을 전제한 재배차는 진행하지 않았습니다. "
+    "물류센터·배송일·배송지 조건을 다시 알려주시면 이어서 진행하겠습니다."
+)
+
+
+def resolve_mode(state: dict[str, Any]) -> ContextMode:
+    """이번 turn 을 어떻게 다룰지 판정한다.
+
+    load_failed 를 신규 요청으로 처리하면 사용자가 조건이 사라진 사실을 모른다.
+    """
+    if state.get(STATE_LOAD_ERROR_KEY):
+        return "load_failed"
+    if state.get("dispatch_request"):
+        return "resume"
+    return "new"
 
 
 def request_ref(dispatch_request: dict[str, Any] | None) -> str:
-    """배차 조건에 짧은 참조 ID를 붙인다. 조건이 같으면 항상 같은 값이 나온다.
-
-    같은 조건 = 같은 ref 라서, QuotaCache(#P1) 의 '동일 조건 해시 캐시' 키로도 그대로 쓸 수 있다.
-    """
+    """배차 조건의 짧은 참조 ID. 같은 조건이면 항상 같은 값이 나온다."""
     if not dispatch_request:
         return "req-none"
     raw = repr(sorted(dispatch_request.items())).encode("utf-8")
@@ -33,23 +51,24 @@ def request_ref(dispatch_request: dict[str, Any] | None) -> str:
 
 
 def summarize_request(state: dict[str, Any]) -> str | None:
-    """현재 배차 조건을 한 덩어리 요약문으로 만든다. 조건이 없으면 None (= 신규 요청으로 처리)."""
-    req = state.get("dispatch_request")
-    if not req:
+    """현재 배차 조건의 요약문. 신규 요청이거나 조회 실패면 None."""
+    if resolve_mode(state) != "resume":
         return None
 
-    dests = req.get("destinations") or []
-    counts: dict[str, int] = {}
-    for d in dests:
-        if isinstance(d, dict):
-            k = d.get("storage_type", "normal")
-            counts[k] = counts.get(k, 0) + 1
-    mix = " / ".join(f"{_STORAGE_LABEL.get(k, k)} {v}" for k, v in counts.items()) or "미분류"
+    req = state["dispatch_request"]
+    parts = [f"ref={request_ref(req)}"]
+    if req.get("depot_id"):
+        parts.append(f"센터 {req['depot_id']}")
 
-    parts = [
-        f"ref={request_ref(req)}",
-        f"배송지 {len(dests)}건 ({mix})",
-    ]
+    dests = req.get("destination_ids")
+    if dests is None:
+        parts.append("배송지 전체")
+    else:
+        parts.append(f"배송지 {len(dests)}건")
+
+    storages = req.get("storage_types")
+    if storages:
+        parts.append("보관 " + "/".join(_STORAGE_LABEL.get(s, s) for s in storages))
     if req.get("vehicle_count") is not None:
         parts.append(f"차량 {req['vehicle_count']}대")
     if req.get("delivery_date"):
@@ -57,22 +76,26 @@ def summarize_request(state: dict[str, Any]) -> str | None:
     if req.get("deadline"):
         parts.append(f"마감 {req['deadline']}")
 
-    status = state.get("dispatch_status", "draft")
-    warn_n = len(state.get("constraint_warnings") or [])
-    calls = state.get("tms_call_count", 0)
-
-    return (
-        "[현재 배차 조건] " + " | ".join(parts) + "\n"
-        f"[상태] {status} | 사전검증 경고 {warn_n}건 | TMS 호출 {calls}회\n"
-        "[주의] 위 요약에 없는 개별 배송지 정보는 추측하지 말고 Tool 로 조회할 것."
-    )
+    lines = ["[현재 배차 조건] " + " | ".join(parts)]
+    counts = [
+        f"주문 {len(state.get('orders') or {})}건",
+        f"차량 {len(state.get('vehicles') or {})}대",
+        f"확정 좌표 {len(state.get('geocodes') or {})}건",
+    ]
+    lines.append("[조회 결과] " + " | ".join(counts))
+    status = state.get("approval_status")
+    if status:
+        lines.append(f"[승인 상태] {status}")
+    lines.append("[주의] 위 요약에 없는 개별 주문·주소는 추측하지 말고 Tool 로 조회할 것.")
+    return "\n".join(lines)
 
 
 @before_model
 def dispatch_context(state: dict[str, Any], runtime: Any) -> dict[str, Any] | None:
-    """요약본을 시스템 메시지로 한 줄 덧붙인다. 조건이 없으면 아무것도 안 한다."""
+    """요약본을 주입한다. 조회 실패면 재배차를 중단하고 조건 확인을 요청한다."""
+    if resolve_mode(state) == "load_failed":
+        return {"messages": [ai_message(LOAD_FAILED_MESSAGE)], "jump_to": "end"}
     summary = summarize_request(state)
     if summary is None:
         return None
-    from ._compat import ai_message
     return {"messages": [ai_message(summary)]}
