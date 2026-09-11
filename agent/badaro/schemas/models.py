@@ -117,8 +117,8 @@ class DispatchRuntimeContext(BaseModel):
 
     이 값은 LLM이 생성하거나 Tool 입력 스키마에 노출하지 않는다. ``depot_id``와
     ``origin``은 센터 마스터에서 서버가 확정하고, 지오코딩 결과는
-    ``destination_id``를 키로 보관하여 배차 Tool이 임의로 주소나 좌표를
-    바꾸지 못하게 한다.
+    ``GeocodeResult.input_address``를 키로 보관하여 같은 주소의 결과를
+    재사용하고 배차 Tool이 임의로 주소나 좌표를 바꾸지 못하게 한다.
     """
 
     depot_id: str | None = None

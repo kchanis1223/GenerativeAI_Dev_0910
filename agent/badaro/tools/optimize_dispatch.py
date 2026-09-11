@@ -78,30 +78,33 @@ def _validate_runtime_context(
             f"State에 차량 정보가 없습니다: {', '.join(missing_vehicles)}",
         )
 
-    destination_ids = {
-        runtime_context.orders[order_id].destination_id for order_id in order_ids
-    }
-    for destination_id in destination_ids:
-        geocode = runtime_context.geocodes.get(destination_id)
+    orders = [runtime_context.orders[order_id] for order_id in order_ids]
+    addresses = {order.address for order in orders}
+    for address in addresses:
+        geocode = runtime_context.geocodes.get(address)
+        destination_ids = sorted(
+            order.destination_id for order in orders if order.address == address
+        )
+        destination_label = ", ".join(destination_ids)
         if geocode is None:
             _raise_context_error(
                 ToolErrorCode.MISSING_CONTEXT,
-                f"State에 배송지 좌표가 없습니다: {destination_id}",
+                f"State에 배송지 좌표가 없습니다: {destination_label} ({address})",
             )
         if geocode.status is GeocodeStatus.AMBIGUOUS:
             _raise_context_error(
                 ToolErrorCode.GEOCODE_AMBIGUOUS,
-                f"배송지 주소가 모호합니다: {destination_id}",
+                f"배송지 주소가 모호합니다: {destination_label} ({address})",
             )
         if geocode.status is GeocodeStatus.NOT_FOUND:
             _raise_context_error(
                 ToolErrorCode.GEOCODE_NOT_FOUND,
-                f"배송지 주소 좌표를 찾을 수 없습니다: {destination_id}",
+                f"배송지 주소 좌표를 찾을 수 없습니다: {destination_label} ({address})",
             )
         if len(geocode.candidates) != 1:
             _raise_context_error(
                 ToolErrorCode.GEOCODE_AMBIGUOUS,
-                f"확정된 배송지 좌표가 없습니다: {destination_id}",
+                f"확정된 배송지 좌표가 없습니다: {destination_label} ({address})",
             )
 
 
