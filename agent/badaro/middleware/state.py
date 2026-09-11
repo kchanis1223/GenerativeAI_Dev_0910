@@ -1,14 +1,20 @@
-"""바다로 Dispatch Copilot — 3.1 State (이슈 #11 B-11 / 설계서 v2 3.1)
+"""State — 설계서 3.1 (이슈 #11)
 
-State = 한 대화(thread) 안에서 변하는 값. checkpointer 가 thread_id 별로 저장한다.
-→ 같은 thread_id 로 다시 호출하면 이전 배차 조건이 그대로 남아 있다 (#11 완료 기준).
+한 대화(thread) 안에서 변하는 값. checkpointer 가 thread_id 별로 저장한다.
 
-설계 원칙 ③ 배차 "계획"과 "확정"을 서로 다른 State 로 분리한다.
+geocodes 는 GeocodeResult.input_address 를 키로 보관한다.
+주문·차량 조회 결과는 orders·vehicles 에 요청별로 둔다.
+
+ApprovalStatus 는 배차 승인 절차의 상태이며, badaro.schemas.DispatchStatus
+(success/partial/failed)와 다른 개념이라 이름을 분리했다. 아직 합의 전 항목이다.
+설계서에 없는 항목은 값이 없으면 동작하지 않는다.
 """
 from __future__ import annotations
 
 import operator
 from typing import Annotated, Any, Literal
+
+from badaro.schemas import GeocodeStatus
 
 try:
     from langchain.agents.middleware import AgentState
@@ -21,49 +27,71 @@ except ImportError:
         class AgentState(TypedDict, total=False):
             messages: list
 
-DispatchStatus = Literal["draft", "pending_approval", "confirmed", "cancelled"]
+ApprovalStatus = Literal["draft", "pending_approval", "confirmed", "cancelled"]
 
 
 class BadaroState(AgentState, total=False):
-    """3.1 State 8항목. create_agent(state_schema=BadaroState) 로 등록한다.
+    """설계서 3.1 State. create_agent(state_schema=BadaroState) 로 등록한다."""
 
-    Annotated[list, operator.add] 의 뜻:
-      노드가 [새 항목] 을 돌려주면 기존 리스트를 '덮어쓰지 않고' 뒤에 이어붙인다.
-      → confirmed_snapshot 을 append-only 로 만드는 장치 (로젠택배 송장 유실 사례 근거)
-    """
-    dispatch_request: dict[str, Any] | None
-    last_dispatch_result: dict[str, Any] | None
+    dispatch_request: Any
+    last_dispatch_result: Any
+    geocodes: dict[str, Any]
+    orders: dict[str, Any]
+    vehicles: dict[str, Any]
 
-    dispatch_status: DispatchStatus
-    confirmed_snapshot: Annotated[list[dict[str, Any]], operator.add]
-
+    approval_status: ApprovalStatus
+    confirmed_snapshot: Annotated[list[Any], operator.add]
     constraint_warnings: Annotated[list[dict[str, Any]], operator.add]
     pending_clarifications: list[dict[str, Any]]
-
-    resolved_locations: dict[str, dict[str, float]]
     tms_call_count: int
 
 
 def initial_state() -> dict[str, Any]:
-    """새 대화를 시작할 때 넣는 기본값. 키가 아예 없으면 미들웨어가 매번 None 검사를 해야 해서 미리 채운다."""
+    """새 대화의 기본값. 설계서 3.1 항목만 채운다."""
     return {
         "dispatch_request": None,
         "last_dispatch_result": None,
-        "dispatch_status": "draft",
-        "confirmed_snapshot": [],
-        "constraint_warnings": [],
-        "pending_clarifications": [],
-        "resolved_locations": {},
-        "tms_call_count": 0,
+        "geocodes": {},
+        "orders": {},
+        "vehicles": {},
     }
 
 
-def is_confirmed(state: dict[str, Any]) -> bool:
-    """확정된 배차인가? ResultValidation 이 '확정된 것처럼 서술'을 잡을 때 쓴다 (3.2.3 확정 상태)."""
-    return state.get("dispatch_status") == "confirmed"
+def _field(obj: Any, name: str) -> Any:
+    """pydantic 모델과 dict 를 같은 방식으로 읽는다."""
+    if isinstance(obj, dict):
+        return obj.get(name)
+    return getattr(obj, name, None)
 
 
-def latest_snapshot(state: dict[str, Any]) -> dict[str, Any] | None:
-    """가장 최근 확정본 1건. DispatchDiff 가 변경분을 뽑을 때의 기준선."""
+def is_confirmed_geocode(result: Any) -> bool:
+    """확정 좌표로 쓸 수 있는 지오코딩 결과인가.
+
+    상태가 ok 이고 후보가 정확히 1개일 때만 확정으로 본다.
+    not_found·ambiguous 는 보관하더라도 확정 좌표로 취급하지 않는다.
+    """
+    if not result:
+        return False
+    status = _field(result, "status")
+    candidates = _field(result, "candidates") or []
+    return status == GeocodeStatus.OK and len(candidates) == 1
+
+
+def confirmed_coord(state: dict[str, Any], address: str) -> dict[str, float] | None:
+    """확정 조건을 만족하는 좌표만 돌려준다. 아니면 None."""
+    result = (state.get("geocodes") or {}).get(address)
+    if not is_confirmed_geocode(result):
+        return None
+    c = (_field(result, "candidates") or [])[0]
+    return {"lat": _field(c, "lat"), "lon": _field(c, "lon")}
+
+
+def is_approved(state: dict[str, Any]) -> bool:
+    """운영자 승인이 끝난 배차인가. approval_status 는 합의 전 항목이라 없으면 False."""
+    return state.get("approval_status") == "confirmed"
+
+
+def latest_snapshot(state: dict[str, Any]) -> Any | None:
+    """가장 최근 확정본. 없으면 None."""
     snaps = state.get("confirmed_snapshot") or []
     return snaps[-1] if snaps else None
