@@ -30,6 +30,7 @@ from badaro.tools.optimize_dispatch import execute_optimize_dispatch
 def disable_mock_for_http_unit_tests(monkeypatch) -> None:
     """HTTP 모킹 테스트는 개별 응답을 검증하므로 공통 Mock fixture를 끈다."""
     monkeypatch.setenv("USE_MOCK", "0")
+    monkeypatch.delenv("TMS_APP_KEY", raising=False)
 
 
 @pytest.mark.parametrize(
@@ -395,7 +396,8 @@ def test_execute_optimize_dispatch_does_not_use_destination_id_as_geocode_key() 
     assert exc_info.value.error.code is ToolErrorCode.MISSING_CONTEXT
 
 
-def test_execute_optimize_dispatch_requests_and_polls_tms(monkeypatch) -> None:
+@pytest.mark.parametrize("tms_key", [None, "", "separate-tms-key"])
+def test_execute_optimize_dispatch_requests_and_polls_tms(monkeypatch, tms_key) -> None:
     import importlib
 
     module = importlib.import_module("badaro.tools.optimize_dispatch")
@@ -440,6 +442,8 @@ def test_execute_optimize_dispatch_requests_and_polls_tms(monkeypatch) -> None:
             return next(responses)
 
     monkeypatch.setenv("TMAP_APP_KEY", "test-key")
+    if tms_key is not None:
+        monkeypatch.setenv("TMS_APP_KEY", tms_key)
     monkeypatch.setenv("TMS_POLL_INTERVAL_SECONDS", "0")
     calls = []
 
@@ -462,6 +466,8 @@ def test_execute_optimize_dispatch_requests_and_polls_tms(monkeypatch) -> None:
     assert result.routes[0].stops[0].destination_id == "STORE-001"
     assert result.routes[0].distance_meters == 19423
     assert calls[0]["startTime"] == "0500"
+    assert len(calls) == 2
+    assert all(call["appKey"] == (tms_key or "test-key") for call in calls)
 
 
 def test_execute_optimize_dispatch_retries_transient_poll_only(monkeypatch) -> None:
