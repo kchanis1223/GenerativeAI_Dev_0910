@@ -3,6 +3,7 @@
 import csv
 import runpy
 import shutil
+from datetime import date
 from pathlib import Path
 
 import pytest
@@ -29,6 +30,30 @@ def test_units_and_deadline_are_preserved():
     vehicle = helpers["vehicle_payload"](helpers["rows"](DATA, "vehicles.csv")[0])
     assert vehicle["capacity_weight_kg"] == 2000
     assert vehicle["supported_storage_types"] == ["live"]
+
+
+def test_separate_demo_data_preserves_source_and_does_not_fall_back(tmp_path, monkeypatch):
+    from badaro.schemas import ToolErrorException
+    from badaro.tools._sample_data import load_orders
+
+    source = DATA / "delivery_orders.csv"
+    before = source.read_bytes()
+    row = helpers["rows"](DATA, source.name)[5]
+    row.update(orderId="ORD-20260912-006", deliveryDate="2026-09-12")
+    target = tmp_path / source.name
+    with target.open("w", newline="") as stream:
+        writer = csv.DictWriter(stream, fieldnames=list(row))
+        writer.writeheader()
+        writer.writerow(row)
+    monkeypatch.setenv("BADARO_DATA_DIR", str(tmp_path))
+    orders = load_orders("CENTER-NR", date(2026, 9, 12), ["S03"], ["건미역"])
+    assert [o.order_id for o in orders] == ["ORD-20260912-006"]
+    assert orders[0].volume_m3 == 0.12
+    assert orders[0].deadline.date() == date(2026, 9, 12)
+    assert source.read_bytes() == before
+    target.unlink()
+    with pytest.raises(ToolErrorException):
+        load_orders("CENTER-NR", date(2026, 9, 12), None, None)
 
 
 @pytest.mark.parametrize("filename,field,value", [

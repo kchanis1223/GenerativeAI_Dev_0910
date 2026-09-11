@@ -178,6 +178,12 @@ def test_TS_09_C08_delivery_date_accepts_date_object():
     assert validate_dispatch_input(payload, now_kst=NOW) == []
 
 
+def test_departure_date_uses_korean_timezone():
+    payload = dict(VALID_REQUEST, delivery_date="2026-09-12",
+                   departure_time="2026-09-11T21:00:00+00:00", deadline=None)
+    assert validate_dispatch_input(payload, now_kst=NOW) == []
+
+
 def test_TS_06_C01_new_request_has_no_injection():
     assert resolve_mode({}) == "new"
     assert summarize_request({}) is None

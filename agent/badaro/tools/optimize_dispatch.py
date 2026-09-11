@@ -74,10 +74,12 @@ def execute_optimize_dispatch(
                 f"주문에 적합한 차량이 없습니다: {order_id}",
             )
     load_dotenv()
-    app_key = os.getenv("TMAP_APP_KEY", "").strip()
+    app_key = os.getenv("TMS_APP_KEY", "").strip() or os.getenv("TMAP_APP_KEY", "").strip()
     use_mock = mock_enabled()
     if not app_key and not use_mock:
-        _raise_context_error(ToolErrorCode.UNAUTHORIZED, "TMAP_APP_KEY가 설정되지 않았습니다")
+        _raise_context_error(
+            ToolErrorCode.UNAUTHORIZED, "TMS_APP_KEY 또는 TMAP_APP_KEY가 설정되지 않았습니다"
+        )
     if use_mock:
         app_key = "mock"
 
@@ -141,7 +143,7 @@ def execute_optimize_dispatch(
                 f"{exc.error.message} (mappingKey={mapping_key})",
             )
         poll_count += 1
-        if str(data.get("resultCode", "")) != "102":
+        if str(data.get("resultCode", "")) not in {"102", "4013"}:
             return _parse_dispatch_result(
                 data,
                 selected_order_ids,

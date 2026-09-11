@@ -1,6 +1,7 @@
 """B-04 CSV 샘플을 B-03 Python 모델로 변환하는 조회 계층."""
 
 import csv
+import os
 from datetime import date, datetime, time, timedelta, timezone
 from functools import wraps
 from pathlib import Path
@@ -45,7 +46,9 @@ def _data_errors(function):
 
 def _rows(filename: str) -> list[dict[str, str]]:
     try:
-        with (_DATA_DIR / filename).open(encoding="utf-8-sig", newline="") as stream:
+        configured_dir = os.getenv("BADARO_DATA_DIR")
+        data_dir = Path(configured_dir) if configured_dir else _DATA_DIR
+        with (data_dir / filename).open(encoding="utf-8-sig", newline="") as stream:
             return list(csv.DictReader(stream))
     except FileNotFoundError as exc:
         raise ToolErrorException(

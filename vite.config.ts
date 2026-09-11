@@ -54,10 +54,15 @@ export function centerApiProxy(appKey: string, request: typeof fetch = fetch): P
 }
 
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), 'TMAP_')
-  const agentEnv = loadEnv(mode, `${process.cwd()}/agent`, 'TMAP_')
+  const env = loadEnv(mode, process.cwd(), ['TMAP_', 'TMS_'])
+  const agentEnv = loadEnv(mode, `${process.cwd()}/agent`, ['TMAP_', 'TMS_'])
   return {
-    plugins: [vue(), centerApiProxy(env.TMAP_APP_KEY || agentEnv.TMAP_APP_KEY || '')],
+    plugins: [
+      vue(),
+      centerApiProxy(
+        env.TMS_APP_KEY || agentEnv.TMS_APP_KEY || env.TMAP_APP_KEY || agentEnv.TMAP_APP_KEY || '',
+      ),
+    ],
     server: {
       proxy: {
         '/api/agent': {

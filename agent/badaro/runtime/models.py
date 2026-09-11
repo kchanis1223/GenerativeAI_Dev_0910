@@ -39,7 +39,10 @@ class OpenAIExtractor:
             "all_destinations=true로 둔다. 지점명은 제공한 목록의 ID로만 바꾼다. "
             "재배차·기사 업무·점주 탭·파일 업로드 요청은 out_of_scope=true다. "
             "주소 수정은 original과 replacement에 사용자가 확인한 주소만 기록한다. "
-            "날짜의 오늘·내일은 기준일을 사용하고 시간을 추측하지 않는다.\n"
+            "날짜의 오늘·내일은 기준일을 사용하고 시간을 추측하지 않는다. "
+            "출발 시각은 배송일과 시각을 합친 ISO 8601 형식으로 쓴다. "
+            "예: 2026-09-11 오전 6시 → 2026-09-11T06:00:00+09:00. "
+            "시각을 연도 위치에 넣지 않는다.\n"
             + json.dumps(
                 {
                     "previous": previous.model_dump(mode="json"),

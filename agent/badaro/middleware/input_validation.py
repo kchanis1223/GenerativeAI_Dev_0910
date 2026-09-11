@@ -18,6 +18,7 @@ from typing import Any
 from pydantic import BaseModel
 
 from ._compat import ai_message, before_agent
+from .context import KST
 
 MAX_DESTINATIONS = 50
 MIN_VEHICLES, MAX_VEHICLES = 1, 20
@@ -63,6 +64,7 @@ def validate_dispatch_input(payload: dict[str, Any] | BaseModel, *,
         issues.append(_issue("depot_id", "missing", "출발 물류센터를 확인하지 못했습니다."))
 
     raw_date = payload.get("delivery_date")
+    d = None
     if raw_date is None:
         issues.append(_issue("delivery_date", "missing", "배송일을 알려주세요."))
     else:
@@ -125,6 +127,13 @@ def validate_dispatch_input(payload: dict[str, Any] | BaseModel, *,
     dl = _parse_dt(payload["deadline"]) if payload.get("deadline") else None
     if payload.get("departure_time") and dep is None:
         issues.append(_issue("departure_time", "bad_format", "출발 시각 형식이 올바르지 않습니다."))
+    if dep is not None and d is not None:
+        local_dep = dep.astimezone(KST) if dep.tzinfo else dep
+        if local_dep.date() != d:
+            issues.append(_issue(
+                "departure_time", "date_mismatch",
+                "출발 시각의 날짜가 배송일과 다릅니다. 날짜와 시각을 확인해 주세요.",
+            ))
     if payload.get("deadline") and dl is None:
         issues.append(_issue("deadline", "bad_format", "마감 시각 형식이 올바르지 않습니다."))
     if dep and dl:

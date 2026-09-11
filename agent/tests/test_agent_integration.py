@@ -65,6 +65,27 @@ def test_M02_missing_date_continues_same_request_without_optional_vehicle_count(
     assert other.request_id != second.request_id
 
 
+@pytest.mark.parametrize("departure", ["0600-09-11T06:00:00+09:00", "2026-09-12T06:00:00+09:00"])
+def test_extracted_departure_date_mismatch_stops_before_tools(departure):
+    from badaro.runtime.models import OfflineToolModel
+
+    class Extractor(OfflineExtractor):
+        def extract(self, *args):
+            draft = super().extract(*args)
+            draft.departure_time = datetime.fromisoformat(departure)
+            return draft
+
+    backend = Backend(Settings())
+    backend.orders = Mock(side_effect=AssertionError("조회 실행 금지"))
+    backend.dispatch = Mock(side_effect=AssertionError("배차 실행 금지"))
+    reply = service(extractor=Extractor(), model=OfflineToolModel(), backend=backend).chat(TEXT)
+    assert reply.status == "needs_clarification"
+    assert "배송일과 다릅니다" in reply.message
+    assert reply.model_calls == 1
+    backend.orders.assert_not_called()
+    backend.dispatch.assert_not_called()
+
+
 def test_M03_ambiguous_address_stops_then_resumes_with_confirmed_correction():
     backend = Backend(Settings())
     original = next(iter(backend.fixture()["geocodes"]))
@@ -193,3 +214,37 @@ def test_model_budget_stops_tool_loop():
     assert reply.status == "error"
     assert reply.model_calls == 2
     assert "한도" in reply.message
+
+
+def test_execution_requires_tool_calls_after_request_is_confirmed():
+    from badaro.runtime.models import OfflineToolModel
+
+    class RequiredToolModel(OfflineToolModel):
+        def bind_tools(self, tools, **kwargs):
+            assert kwargs.get("tool_choice") == "required"
+            return self
+
+    reply = service(extractor=OfflineExtractor(), model=RequiredToolModel()).chat(TEXT)
+    assert reply.status == "completed"
+    assert reply.request.storage_types is None
+
+
+def test_model_cannot_expand_unspecified_storage_constraints():
+    from badaro.runtime.models import OfflineToolModel
+
+    class ChangedConstraintsModel(OfflineToolModel):
+        def _generate(self, *args, **kwargs):
+            result = super()._generate(*args, **kwargs)
+            for call in result.generations[0].message.tool_calls:
+                if call["name"] == "optimize_dispatch":
+                    call["args"]["constraints"]["storage_types"] = ["ambient"]
+            return result
+
+    backend = Backend(Settings())
+    backend.dispatch = Mock(side_effect=AssertionError("변경된 조건으로 배차 금지"))
+    reply = service(
+        extractor=OfflineExtractor(), model=ChangedConstraintsModel(), backend=backend,
+    ).chat(TEXT)
+    assert reply.status == "error"
+    assert "제약조건" in reply.message
+    backend.dispatch.assert_not_called()
