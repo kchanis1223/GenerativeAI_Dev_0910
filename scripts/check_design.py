@@ -23,7 +23,9 @@ def contract():
         if isinstance(node, ast.keyword) and node.arg == "middleware"
     )
     return {
-        "tools": {t.name: list(t.tool_call_schema.model_json_schema()["properties"]) for t in TOOLS},
+        "tools": {
+            t.name: list(t.tool_call_schema.model_json_schema()["properties"]) for t in TOOLS
+        },
         "middleware": middleware,
         "models": {
             cls.__name__: list(cls.model_fields)

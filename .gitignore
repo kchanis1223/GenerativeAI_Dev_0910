@@ -20,3 +20,6 @@ build/
 .coverage
 htmlcov/
 .ipynb_checkpoints/
+
+# Generated demonstration CSVs
+demo-data/
