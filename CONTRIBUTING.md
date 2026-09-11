@@ -15,11 +15,11 @@
 
 | 폴더                                                                                                                                      | 담당   |
 | ----------------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| `src/`, `tests/`, `public/`, `index.html`, vite·eslint 설정 (프론트)                                                                      | 김강휘 |
+| `src/`, `tests/`, `public/`, `index.html`, vite·eslint 설정 (프론트)                                                                      | 가니 |
 | `agent/badaro/schemas/`, `agent/prompts/`                                                                                                 | 이준형 |
 | `agent/badaro/tools/`, `agent/data/`, `docs/tms-api.md`, `docs/api/`                                                                      | 권유나 |
 | `agent/badaro/middleware/`, `agent/badaro/guardrails/`                                                                                    | 윤소영 |
-| `agent/tests/`                                                                                                                            | 김강휘 |
+| `agent/tests/`                                                                                                                            | 가니 |
 | `agent/badaro/agent.py`, `agent/requirements.txt`, `agent/pyproject.toml`, `agent/.env.example`, `README.md`, `docs/`(설계서), `.github/` | 김동찬 |
 
 공용 파일(`agent.py`, `requirements.txt`, `pyproject.toml`, `.env.example`, `README.md`)에 추가할 내용은 PR 본문에 대상 위치와 함께 요청한다.

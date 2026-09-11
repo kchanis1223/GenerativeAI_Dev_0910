@@ -190,15 +190,6 @@ onBeforeUnmount(() => {
 <template>
   <section class="map-region" aria-label="배송 경로 지도">
     <div ref="element" class="delivery-map" aria-label="서울 배송 지도" />
-    <div class="map-heading">
-      <span class="live-dot" />
-      <strong>{{ hasResult ? '차량별 배송 경로' : '배송지 미리보기' }}</strong>
-      <span>{{
-        hasResult
-          ? `${visiblePlans.length}대 표시 중`
-          : `${new Set(orders.map((o) => o.branchId)).size}곳`
-      }}</span>
-    </div>
     <button class="map-fit" @click="frame">전체 위치 보기 <span aria-hidden="true">⌖</span></button>
     <div v-if="hasResult && plans.length" class="map-legend" aria-label="차량 경로 범례">
       <button

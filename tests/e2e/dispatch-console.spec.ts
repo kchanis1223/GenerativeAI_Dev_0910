@@ -130,7 +130,8 @@ test('데스크톱은 왼쪽 선택·결과와 오른쪽 큰 지도로 나뉘며
   const left = (await panel.boundingBox())!
   const right = (await map.boundingBox())!
   expect(right.x).toBeGreaterThanOrEqual(left.x + left.width - 1)
-  expect(right.y).toBe(left.y)
+  const mapCard = (await page.locator('.map-column').boundingBox())!
+  expect(mapCard.y).toBe(left.y)
   expect(right.width).toBeGreaterThan(left.width)
   expect(right.height).toBeGreaterThan(800)
   await page.getByRole('button', { name: '배차 요청', exact: true }).click()

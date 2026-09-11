@@ -15,6 +15,8 @@ import {
 import BadaroLogo from '../components/BadaroLogo.vue'
 import DeliveryMap from '../components/DeliveryMap.vue'
 import DispatchProgressModal from '../components/DispatchProgressModal.vue'
+import AgentChat from '../components/AgentChat.vue'
+import LiveCenterLookup from '../components/LiveCenterLookup.vue'
 import { createDispatchConsole } from '../stores/dispatch-console'
 import { arrival, duration, number, routeColors } from '../services/dispatch-display'
 
@@ -141,13 +143,19 @@ onBeforeUnmount(consoleState.dispose)
       <span class="header-divider" />
       <h1>배송 배차</h1>
       <div class="header-meta">
-        <span class="demo-badge"><span class="live-dot" />목업 모드</span
+        <RouterLink to="/" class="operator-badge" title="진입 화면으로 돌아가기"
+          >본사물류운영자 전용</RouterLink
         ><span>{{ state.deliveryDate }} <span class="date-caption">배송 데이터</span></span>
       </div>
     </header>
 
     <main class="console-grid">
       <aside ref="controlPanel" class="control-panel" aria-label="배송 선택과 배차 결과">
+        <AgentChat
+          :center-name="String(center?.centerName ?? '센터 미선택')"
+          :vehicle-count="vehicles.length"
+          :order-count="orders.length"
+        />
         <section class="setup-area" aria-label="배차 설정">
           <fieldset class="setup-fields" :disabled="state.busy">
             <legend class="sr-only">센터, 차량, 배송정보 선택</legend>
@@ -174,6 +182,7 @@ onBeforeUnmount(consoleState.dispose)
                   </label>
                 </div>
                 <p class="center-caption">서울 전역 · 배송 출발 센터</p>
+                <LiveCenterLookup />
               </section>
               <section class="selection-panel" aria-labelledby="vehicle-label">
                 <h2 id="vehicle-label">
