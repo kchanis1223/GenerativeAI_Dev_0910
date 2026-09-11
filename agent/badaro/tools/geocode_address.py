@@ -72,9 +72,9 @@ def _request_once(params: dict[str, str]) -> dict[str, Any]:
     except httpx.TimeoutException as exc:
         _raise_error(ToolErrorCode.TIMEOUT, "TMAP 지오코딩 요청 시간이 초과되었습니다", True)
         raise AssertionError("unreachable") from exc
-    except httpx.HTTPError as exc:
+    except httpx.HTTPError:
         _raise_error(
-            ToolErrorCode.UPSTREAM_ERROR, f"TMAP 지오코딩 요청에 실패했습니다: {exc}", True
+            ToolErrorCode.UPSTREAM_ERROR, "TMAP 지오코딩 요청에 실패했습니다", True
         )
     if response.status_code == 429:
         _raise_error(ToolErrorCode.RATE_LIMITED, "TMAP 지오코딩 호출 한도를 초과했습니다", True)
@@ -154,7 +154,9 @@ def _parse_response(input_address: str, payload: dict[str, Any]) -> GeocodeResul
             exact_candidates.append(candidates[-1])
 
     if not candidates:
-        _raise_error(ToolErrorCode.UPSTREAM_ERROR, "TMAP 응답에 유효한 좌표가 없습니다", False)
+        return GeocodeResult(
+            status=GeocodeStatus.NOT_FOUND, input_address=input_address, candidates=[]
+        )
     status = GeocodeStatus.OK if len(exact_candidates) == 1 else GeocodeStatus.AMBIGUOUS
     return GeocodeResult(status=status, input_address=input_address, candidates=candidates)
 
