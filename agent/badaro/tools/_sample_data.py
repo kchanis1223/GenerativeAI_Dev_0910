@@ -4,7 +4,16 @@ import csv
 from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 
-from badaro.schemas import Order, OrderItem, Priority, StorageType, Vehicle
+from badaro.schemas import (
+    Order,
+    OrderItem,
+    Priority,
+    StorageType,
+    ToolError,
+    ToolErrorCode,
+    ToolErrorException,
+    Vehicle,
+)
 
 _DATA_DIR = Path(__file__).resolve().parents[2] / "data"
 _SEOUL = timezone(timedelta(hours=9))
@@ -17,8 +26,17 @@ _STORAGE_TYPES = {
 
 
 def _rows(filename: str) -> list[dict[str, str]]:
-    with (_DATA_DIR / filename).open(encoding="utf-8-sig", newline="") as stream:
-        return list(csv.DictReader(stream))
+    try:
+        with (_DATA_DIR / filename).open(encoding="utf-8-sig", newline="") as stream:
+            return list(csv.DictReader(stream))
+    except FileNotFoundError as exc:
+        raise ToolErrorException(
+            ToolError(
+                code=ToolErrorCode.INTERNAL_ERROR,
+                message="샘플 데이터 파일을 찾을 수 없습니다",
+                retryable=False,
+            )
+        ) from exc
 
 
 def _date(value: str) -> date:
@@ -101,7 +119,7 @@ def load_vehicles(
             continue
         supported = [
             _storage(item)
-            for item in row["supportedItemTypes"].replace("·", ",").split(",")
+            for item in row["supportedItemTypes"].replace("·", ",").replace("|", ",").split(",")
             if item.strip() in _STORAGE_TYPES
         ]
         result.append(

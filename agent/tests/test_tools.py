@@ -53,6 +53,27 @@ def test_b03_tools_are_stubs(tool) -> None:
         tool(*([None] * len(inspect.signature(tool).parameters)))
 
 
+def test_b10_vehicle_storage_types_support_pipe_separator() -> None:
+    from importlib import import_module
+
+    sample_data = import_module("badaro.tools._sample_data")
+    assert sample_data._storage("냉장") is StorageType.REFRIGERATED
+    assert [
+        sample_data._storage(item)
+        for item in "냉장|냉동".split("|")
+    ] == [StorageType.REFRIGERATED, StorageType.FROZEN]
+
+
+def test_b10_missing_csv_raises_tool_error(monkeypatch, tmp_path) -> None:
+    from importlib import import_module
+
+    sample_data = import_module("badaro.tools._sample_data")
+    monkeypatch.setattr(sample_data, "_DATA_DIR", tmp_path)
+    with pytest.raises(ToolErrorException) as exc_info:
+        get_delivery_orders("CENTER-NR", datetime(2026, 9, 11).date(), None, None)
+    assert exc_info.value.error.code is ToolErrorCode.INTERNAL_ERROR
+
+
 def test_b10_get_delivery_orders_reads_and_filters_sample_csv() -> None:
     orders = get_delivery_orders(
         "CENTER-NR",
