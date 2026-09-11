@@ -72,3 +72,11 @@ USE_MOCK=1 MODEL_MODE=offline python -m badaro.server --port 8000
 `cd agent && python -m pytest`로 기존 테스트와 M01~M08 통합 테스트, 실제 로컬 HTTP 테스트, 저장소 밖 wheel 설치 테스트를 실행한다. 테스트는 실제 LLM·TMS를 호출하지 않는다. 모델 호출 상한, 요청 분리, 모호한 주소 보완, 배차 중복 실행 방지와 금지 Tool 인자를 포함한다.
 
 [LangChain ToolRuntime·Command](https://docs.langchain.com/oss/python/langchain/tools)로 서버 State를 주입한다. [미들웨어 종료 분기](https://docs.langchain.com/oss/python/langchain/middleware/custom)로 오류와 호출 상한에서 멈춘다. 조건 추출은 [OpenAI 구조화 출력의 strict 규칙](https://developers.openai.com/api/docs/guides/function-calling#strict-mode)을 사용하는 동일 모델에서 처리한다.
+
+## 실제 모델 연결 확인 (2026-09-11)
+
+`gpt-5.4-mini`로 Vue에서 `마포 서대문 은평 배차해줘`를 보내고 배송일 질문에 `2026-09-11`로 답해 주문·차량 조회, 주소 확인, 배차 Tool 호출까지 확인했다. 배차와 주소 응답은 합성 Mock이며 결과는 차량 4대·주문 6건·미배정 0건이다. 실제 TMS 최적화 검증으로 계산하지 않는다.
+
+첫 실모델 실행에서는 조건에 없던 보관유형을 추가하거나 가용 차량 일부를 제외했고, Tool 호출 없이 텍스트로 끝난 경우도 있었다. 실행 단계에서 Tool 호출을 요구하고, 서버가 확인한 null·목록과 가용 차량 전체를 유지하도록 지침을 보완했다. 조건 변경을 차단하는 서버 검증은 유지한다. 보완 후 Python 테스트 176개와 Ruff가 통과했다.
+
+제공된 앱 키의 TMS 목록 조회는 성공했으나 센터·차량·배송지 등록 데이터는 조회되지 않았다. TMAP 주소 변환은 HTTP 403 `INVALID_API_KEY`로 실패했다. TMAP/TMS에서 사용할 수 있는 키 확인과 CSV에 대응하는 마스터 등록·대조가 남아 있으며, 이번 검증의 실제 배차 요청은 0회다.

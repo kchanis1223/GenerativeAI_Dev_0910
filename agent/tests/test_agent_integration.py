@@ -193,3 +193,37 @@ def test_model_budget_stops_tool_loop():
     assert reply.status == "error"
     assert reply.model_calls == 2
     assert "한도" in reply.message
+
+
+def test_execution_requires_tool_calls_after_request_is_confirmed():
+    from badaro.runtime.models import OfflineToolModel
+
+    class RequiredToolModel(OfflineToolModel):
+        def bind_tools(self, tools, **kwargs):
+            assert kwargs.get("tool_choice") == "required"
+            return self
+
+    reply = service(extractor=OfflineExtractor(), model=RequiredToolModel()).chat(TEXT)
+    assert reply.status == "completed"
+    assert reply.request.storage_types is None
+
+
+def test_model_cannot_expand_unspecified_storage_constraints():
+    from badaro.runtime.models import OfflineToolModel
+
+    class ChangedConstraintsModel(OfflineToolModel):
+        def _generate(self, *args, **kwargs):
+            result = super()._generate(*args, **kwargs)
+            for call in result.generations[0].message.tool_calls:
+                if call["name"] == "optimize_dispatch":
+                    call["args"]["constraints"]["storage_types"] = ["ambient"]
+            return result
+
+    backend = Backend(Settings())
+    backend.dispatch = Mock(side_effect=AssertionError("변경된 조건으로 배차 금지"))
+    reply = service(
+        extractor=OfflineExtractor(), model=ChangedConstraintsModel(), backend=backend,
+    ).chat(TEXT)
+    assert reply.status == "error"
+    assert "제약조건" in reply.message
+    backend.dispatch.assert_not_called()

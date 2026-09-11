@@ -3,7 +3,7 @@
 import time
 
 from langchain.agents import create_agent
-from langchain.agents.middleware import after_model, before_model, wrap_tool_call
+from langchain.agents.middleware import after_model, before_model, wrap_model_call, wrap_tool_call
 from langchain_core.messages import ToolMessage
 from langgraph.types import Command
 
@@ -81,6 +81,12 @@ def execute_tool(request, handler):
     return Command(update={"errors": [error.model_dump()], "messages": [result]})
 
 
+@wrap_model_call
+def require_tool(request, handler):
+    """입력 보완이 끝난 실행 단계는 Tool 호출로 진행한다."""
+    return handler(request.override(tool_choice="required"))
+
+
 def build_graph(model, max_calls):
     @before_model(can_jump_to=["end"])
     def budget(state, runtime):
@@ -96,9 +102,15 @@ def build_graph(model, max_calls):
         tools=TOOLS,
         state_schema=RunState,
         context_schema=RunContext,
-        middleware=[input_validation, dispatch_context, budget, validate_calls, execute_tool],
+        middleware=[
+            input_validation, dispatch_context, budget, require_tool, validate_calls, execute_tool,
+        ],
         system_prompt=prompts.system + "\n" + prompts.fewshot + "\n"
         "서버가 확인한 요청 JSON을 그대로 사용한다. 먼저 주문과 차량을 각각 한 번 조회하고, "
-        "주문 주소들을 확인한 뒤 조회한 주문 전체로 배차한다. 조회끼리는 동시 호출할 수 있다. "
+        "주문 주소들을 확인한 뒤 조회한 주문 ID 전체와 가용 차량 ID 전체로 배차한다. "
+        "실제 배정 차량은 TMS가 선택하므로 모델이 후보 차량을 줄이지 않는다. "
+        "constraints는 request의 동일 필드를 그대로 복사한다. null과 빈 목록도 유지한다. "
+        "특히 storage_types=null을 주문에서 찾은 보관유형 목록으로 바꾸지 않는다. "
+        "조회끼리는 동시 호출할 수 있고, 서로 다른 주소는 한 번에 병렬 조회한다. "
         "배차는 다른 Tool과 동시에 호출하지 않는다. 배차 결과를 문장으로 재작성하지 않는다.",
     )
