@@ -1,10 +1,10 @@
 """Runtime Context — 설계서 3.1 (이슈 #11)
 
 호출 시점에 정해지고 대화 내내 바뀌지 않는 값.
-create_agent(context_schema=BadaroContext) 로 등록하고 미들웨어는 읽기만 한다.
+현재 Agent는 이를 확장한 RunContext를 등록한다. 권한 관련 필드는 호환용이다.
 
 차량·좌표·보관유형 타입은 badaro.schemas(B-03)를 그대로 쓴다. 같은 개념을 두 번 정의하지 않는다.
-depot_profile 은 센터 ID·확정 출발 좌표·보유 차량의 출처다.
+depot_profile 은 센터 ID·확정 출발 좌표의 출처이며 현재 가용 차량은 Tool로 조회한다.
 화면에서 고른 역할은 권한 근거로 쓰지 않는다.
 """
 from __future__ import annotations

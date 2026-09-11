@@ -1,0 +1,92 @@
+{
+  "tools": {
+    "get_delivery_orders": [
+      "depot_id",
+      "delivery_date",
+      "destination_ids",
+      "product_names"
+    ],
+    "get_available_vehicles": [
+      "depot_id",
+      "delivery_date",
+      "vehicle_count",
+      "excluded_vehicle_ids"
+    ],
+    "geocode_address": [
+      "address"
+    ],
+    "optimize_dispatch": [
+      "order_ids",
+      "vehicle_ids",
+      "constraints"
+    ]
+  },
+  "middleware": [
+    "input_validation",
+    "dispatch_context",
+    "budget",
+    "require_tool",
+    "validate_calls",
+    "execute_tool"
+  ],
+  "models": {
+    "RequestDraft": [
+      "depot_id",
+      "delivery_date",
+      "destination_ids",
+      "all_destinations",
+      "departure_time",
+      "vehicle_count",
+      "excluded_destination_ids",
+      "excluded_vehicle_ids",
+      "product_names",
+      "deadline",
+      "priority",
+      "storage_types",
+      "address_corrections",
+      "out_of_scope"
+    ],
+    "DispatchRequest": [
+      "depot_id",
+      "destination_ids",
+      "delivery_date",
+      "departure_time",
+      "vehicle_count",
+      "excluded_destination_ids",
+      "excluded_vehicle_ids",
+      "product_names",
+      "deadline",
+      "priority",
+      "storage_types"
+    ],
+    "DispatchConstraints": [
+      "priority",
+      "deadline",
+      "storage_types",
+      "departure_time",
+      "excluded_destination_ids"
+    ],
+    "DispatchResult": [
+      "status",
+      "routes",
+      "unassigned_orders"
+    ],
+    "AgentReply": [
+      "thread_id",
+      "request_id",
+      "mode",
+      "status",
+      "message",
+      "questions",
+      "request",
+      "result",
+      "map_data",
+      "error",
+      "model_calls"
+    ],
+    "DispatchMap": [
+      "origin",
+      "stops"
+    ]
+  }
+}

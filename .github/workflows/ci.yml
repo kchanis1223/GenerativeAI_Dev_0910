@@ -38,4 +38,5 @@ jobs:
       - run: python -m pip install -r requirements.txt
       - run: python -m ruff check .
       - run: python -m compileall -q badaro
+      - run: python ../scripts/check_design.py
       - run: python -m pytest

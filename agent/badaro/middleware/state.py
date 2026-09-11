@@ -1,12 +1,12 @@
 """State — 설계서 3.1 (이슈 #11)
 
-한 대화(thread) 안에서 변하는 값. checkpointer 가 thread_id 별로 저장한다.
+한 대화(thread) 안에서 변하는 값. 현재 Agent는 Session에 요청별로 보관한다.
 
 geocodes 는 GeocodeResult.input_address 를 키로 보관한다.
 주문·차량 조회 결과는 orders·vehicles 에 요청별로 둔다.
 
 state_load_error 는 저장소 조회 실패 신호다. 값이 있으면 기존 조건을 전제한 재배차를 중단한다.
-result_validation_retries 는 결과 재생성 횟수다. 두 키 모두 이름을 #17 과 맞춰야 한다.
+result_validation_retries 는 미등록된 결과 재생성 모듈의 호환 필드다.
 
 ApprovalStatus 는 배차 승인 절차의 상태이며, badaro.schemas.DispatchStatus
 (success/partial/failed)와 다른 개념이라 이름을 분리했다. 아직 합의 전 항목이다.
@@ -34,7 +34,7 @@ ApprovalStatus = Literal["draft", "pending_approval", "confirmed", "cancelled"]
 
 
 class BadaroState(AgentState, total=False):
-    """설계서 3.1 State. create_agent(state_schema=BadaroState) 로 등록한다."""
+    """공통 State. 현재 Agent는 이를 확장한 RunState를 등록한다."""
 
     dispatch_request: Any
     last_dispatch_result: Any
