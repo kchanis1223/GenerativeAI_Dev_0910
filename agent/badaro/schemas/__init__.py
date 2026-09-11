@@ -1,1 +1,43 @@
-"""B-03/B-05: DispatchRequest와 DispatchResult 스키마 구현 위치."""
+"""B-03 공통 스키마 공개 API."""
+
+from .models import (
+    DispatchConstraints,
+    DispatchRequest,
+    DispatchResult,
+    DispatchStatus,
+    GeocodeCandidate,
+    GeocodeResult,
+    GeocodeStatus,
+    Order,
+    OrderItem,
+    Priority,
+    Stop,
+    StorageType,
+    ToolError,
+    ToolErrorCode,
+    ToolErrorException,
+    UnassignedOrder,
+    Vehicle,
+    VehicleRoute,
+)
+
+__all__ = [
+    "DispatchConstraints",
+    "DispatchRequest",
+    "DispatchResult",
+    "DispatchStatus",
+    "GeocodeCandidate",
+    "GeocodeResult",
+    "GeocodeStatus",
+    "Order",
+    "OrderItem",
+    "Priority",
+    "Stop",
+    "StorageType",
+    "ToolError",
+    "ToolErrorCode",
+    "ToolErrorException",
+    "UnassignedOrder",
+    "Vehicle",
+    "VehicleRoute",
+]
