@@ -115,7 +115,7 @@ def execute_optimize_dispatch(
             )
         except ToolErrorException as exc:
             last_poll_error = exc
-            if exc.error.code in {
+            if exc.error.retryable and exc.error.code in {
                 ToolErrorCode.TIMEOUT,
                 ToolErrorCode.RATE_LIMITED,
                 ToolErrorCode.UPSTREAM_ERROR,
@@ -127,7 +127,12 @@ def execute_optimize_dispatch(
                 f"{exc.error.message} (mappingKey={mapping_key})",
             )
         if str(data.get("resultCode", "")) != "102":
-            return _parse_dispatch_result(data, selected_order_ids, runtime_context)
+            return _parse_dispatch_result(
+                data,
+                selected_order_ids,
+                runtime_context,
+                requested_vehicle_ids=vehicle_ids,
+            )
         if attempt + 1 < attempts:
             time.sleep(interval)
 
@@ -143,7 +148,11 @@ def execute_optimize_dispatch(
 
 
 def _parse_dispatch_result(
-    data: dict, order_ids: list[str], context: DispatchRuntimeContext
+    data: dict,
+    order_ids: list[str],
+    context: DispatchRuntimeContext,
+    *,
+    requested_vehicle_ids: list[str] | None = None,
 ) -> DispatchResult:
     if str(data.get("resultCode", "")) not in {"200", "0"}:
         _raise_context_error(ToolErrorCode.UPSTREAM_ERROR, "TMS 배차 결과를 받지 못했습니다")
@@ -151,8 +160,15 @@ def _parse_dispatch_result(
     assigned: set[str] = set()
     invalid_results: dict[str, str] = {}
     invalid_codes: dict[str, str] = {}
+    requested_orders = set(order_ids)
+    requested_vehicles = set(requested_vehicle_ids or context.vehicles)
     for vehicle in data.get("vehicleList", []):
         vehicle_id = str(vehicle.get("vehicleId", ""))
+        if vehicle_id not in requested_vehicles:
+            _raise_context_error(
+                ToolErrorCode.UPSTREAM_ERROR,
+                "TMS가 요청하지 않은 차량을 배차 결과에 포함했습니다",
+            )
         known_vehicle = context.vehicles.get(vehicle_id)
         raw_orders = vehicle.get("orderList", [])
         if not isinstance(raw_orders, list):
@@ -164,6 +180,11 @@ def _parse_dispatch_result(
                 ToolErrorCode.UPSTREAM_ERROR, "TMS 주문 항목 구조가 올바르지 않습니다"
             )
         route_order_ids = [str(order.get("orderId", "")) for order in raw_orders]
+        if any(order_id not in requested_orders for order_id in route_order_ids):
+            _raise_context_error(
+                ToolErrorCode.UPSTREAM_ERROR,
+                "TMS가 요청하지 않은 주문을 배차 결과에 포함했습니다",
+            )
         route_orders = [context.orders.get(order_id) for order_id in route_order_ids]
         route_reason: str | None = None
         if known_vehicle is None or not known_vehicle.available:
@@ -185,6 +206,22 @@ def _parse_dispatch_result(
         ):
             route_reason = "capacity_exceeded"
             reason_message = "차량별 주문 합계 적재중량을 초과했습니다"
+        elif (
+            known_vehicle.capacity_volume_m3 is not None
+            and sum(order.volume_m3 or 0 for order in route_orders if order is not None)
+            > known_vehicle.capacity_volume_m3
+        ):
+            route_reason = "volume_exceeded"
+            reason_message = "차량별 주문 합계 적재부피를 초과했습니다"
+        elif any(
+            _deadline_exceeded(
+                _parse_eta(order.get("expectedArrivalTime")),
+                context.orders[order_id].deadline,
+            )
+            for order_id, order in zip(route_order_ids, raw_orders, strict=True)
+        ):
+            route_reason = "deadline_exceeded"
+            reason_message = "주문 마감시간을 초과하는 경로입니다"
 
         if route_reason is not None:
             for order_id in route_order_ids:
@@ -241,6 +278,16 @@ def _parse_eta(value: object):
         return None
 
 
+def _deadline_exceeded(eta: datetime | None, deadline: datetime | None) -> bool:
+    if eta is None or deadline is None:
+        return False
+    if deadline.tzinfo is None:
+        deadline = deadline.replace(tzinfo=_SEOUL)
+    else:
+        deadline = deadline.astimezone(_SEOUL)
+    return eta > deadline
+
+
 def _int_or_none(value: object):
     try:
         return int(value) if value is not None and value != "" else None
@@ -253,22 +300,35 @@ def _request_json(url: str, params: dict[str, str], *, phase: str) -> dict:
     try:
         response = httpx.get(url, params=params, timeout=10.0)
     except httpx.TimeoutException as exc:
-        _raise_context_error(ToolErrorCode.TIMEOUT, f"TMS {phase} 요청 시간이 초과되었습니다")
+        _raise_context_error(
+            ToolErrorCode.TIMEOUT,
+            f"TMS {phase} 요청 시간이 초과되었습니다",
+            retryable=phase == "poll",
+        )
         raise AssertionError("unreachable") from exc
     except httpx.HTTPError as exc:
-        _raise_context_error(ToolErrorCode.UPSTREAM_ERROR, f"TMS {phase} 요청에 실패했습니다")
+        _raise_context_error(
+            ToolErrorCode.UPSTREAM_ERROR,
+            f"TMS {phase} 요청에 실패했습니다",
+            retryable=phase == "poll",
+        )
         raise AssertionError("unreachable") from exc
 
     status = response.status_code
+    retryable = phase == "poll"
     if status == 429:
-        _raise_context_error(ToolErrorCode.RATE_LIMITED, "TMS API 호출 한도를 초과했습니다")
+        _raise_context_error(
+            ToolErrorCode.RATE_LIMITED, "TMS API 호출 한도를 초과했습니다", retryable=retryable
+        )
     if status in (401, 403):
         _raise_context_error(ToolErrorCode.UNAUTHORIZED, "TMS 앱키 인증에 실패했습니다")
     if 400 <= status < 500:
         _raise_context_error(ToolErrorCode.INVALID_INPUT, f"TMS 요청이 거부되었습니다 ({status})")
     if status >= 500:
         _raise_context_error(
-            ToolErrorCode.UPSTREAM_ERROR, f"TMS 서버 오류가 발생했습니다 ({status})"
+            ToolErrorCode.UPSTREAM_ERROR,
+            f"TMS 서버 오류가 발생했습니다 ({status})",
+            retryable=retryable,
         )
     try:
         payload = response.json()
@@ -349,5 +409,7 @@ def _validate_runtime_context(
             )
 
 
-def _raise_context_error(code: ToolErrorCode, message: str) -> None:
-    raise ToolErrorException(ToolError(code=code, message=message, retryable=False))
+def _raise_context_error(
+    code: ToolErrorCode, message: str, *, retryable: bool = False
+) -> None:
+    raise ToolErrorException(ToolError(code=code, message=message, retryable=retryable))
