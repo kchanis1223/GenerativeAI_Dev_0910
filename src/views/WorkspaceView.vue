@@ -320,7 +320,7 @@ onMounted(run)
               activePage === 'centers'
                 ? '센터 조회하기'
                 : activePage === 'flow'
-                  ? '눈으로 확인하는 동작 흐름'
+                  ? '조회 처리 과정'
                   : '실행 기록'
             }}
           </h1>
@@ -330,7 +330,7 @@ onMounted(run)
             :active="activeSection"
             @select="navigateSection"
           />
-          <p v-else class="hero-description">이번 세션의 조회 과정을 한눈에 확인하세요.</p>
+          <p v-else class="hero-description">현재 탭에서 실행한 조회 결과와 오류 기록입니다.</p>
         </div>
       </section>
 
@@ -422,7 +422,7 @@ onMounted(run)
                 />
                 <div class="list-caption">
                   <span>{{ appliedFilter }}</span
-                  ><span>센터를 선택하면 상세 정보를 확인할 수 있어요</span>
+                  ><span>목록에서 센터를 선택하면 상세 정보를 표시합니다.</span>
                 </div>
                 <div v-if="running" class="empty-state" role="status">
                   <LoaderCircle :size="25" class="spin" /><strong>센터를 불러오고 있습니다</strong
@@ -439,7 +439,7 @@ onMounted(run)
                   ><span>{{
                     error
                       ? '오류 내용을 확인한 뒤 다시 실행해 주세요.'
-                      : '검색 조건 또는 테스트 시나리오를 변경해 보세요.'
+                      : '검색 조건 또는 테스트 시나리오를 변경하세요.'
                   }}</span>
                 </div>
                 <div v-else class="table-scroll">
@@ -589,7 +589,7 @@ onMounted(run)
                   <p>
                     {{
                       connection.mode === 'mock'
-                        ? 'API 키 없이 먼저 체험해 보세요.'
+                        ? 'API 키 없이 목업 데이터를 조회합니다.'
                         : '연결한 서버의 응답을 확인합니다.'
                     }}
                   </p>
@@ -671,7 +671,7 @@ onMounted(run)
                     running ? '실행 중' : error ? '실패' : lastRun ? '완료' : '대기'
                   }}</span>
                 </div>
-                <p class="panel-description">입력부터 결과까지, 단계별로 확인하세요.</p>
+                <p class="panel-description">입력 확인, API 호출, 응답 검증, 검색, 결과 표시 순서입니다.</p>
                 <ol class="flow-steps" aria-live="polite">
                   <li v-for="(step, index) in steps" :key="step.title" :class="step.status">
                     <span class="step-marker"
@@ -774,7 +774,7 @@ onMounted(run)
           <TmsHistory v-if="activePage === 'history'" />
           <footer class="page-footer">
             <RouterLink to="/" class="footer-brand">Badaro</RouterLink
-            ><span>물류의 흐름을 더 가볍게.</span
+            ><span>센터·차량·배송지·배차 관리</span
             ><a :href="API_REFERENCE" target="_blank" rel="noreferrer"
               >SK open API 명세 기반<ExternalLink :size="14"
             /></a>
@@ -802,14 +802,14 @@ onMounted(run)
               <X :size="20" />
             </button>
           </div>
-          <p class="modal-intro">지금은 목업으로 시작하고, API 준비 후 연결하세요.</p>
+          <p class="modal-intro">목업 데이터를 사용하거나 센터 목록 조회 서버를 연결할 수 있습니다.</p>
           <form @submit.prevent="saveSettings">
             <fieldset class="mode-options">
               <legend>데이터 소스</legend>
               <label :class="{ chosen: draftConnection.mode === 'mock' }"
                 ><input v-model="draftConnection.mode" type="radio" value="mock" /><span
                   ><strong>목업 데이터</strong
-                  ><small>앱 키 없이 모든 시나리오를 테스트합니다.</small></span
+                  ><small>앱 키 없이 센터 조회 테스트를 실행합니다.</small></span
                 ><span class="recommended">기본</span></label
               ><label :class="{ chosen: draftConnection.mode === 'proxy' }"
                 ><input v-model="draftConnection.mode" type="radio" value="proxy" /><span

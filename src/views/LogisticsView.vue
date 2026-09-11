@@ -16,12 +16,12 @@ const pages: Record<string, { title: string; intro: string; steps: string[] }> =
   },
   orders: {
     title: '주문 정보 관리',
-    intro: '배송할 장소와 물량을 한곳에서 관리하세요.',
+    intro: '배송지 주소와 배송 물량을 등록하세요.',
     steps: [],
   },
   api: {
     title: 'API 살펴보기',
-    intro: '요청부터 응답까지, 물류 데이터가 움직이는 과정.',
+    intro: 'API별 요청 항목과 목업 응답을 확인하세요.',
     steps: ['API 선택', '요청 구성', '목업 실행', '응답 확인'],
   },
 }
@@ -104,7 +104,7 @@ const latest = computed(() => tmsLogs[0])
       </div>
     </main>
     <footer class="logistics-footer">
-      <RouterLink to="/">Badaro</RouterLink><span>물류의 흐름을, 바다로.</span
+      <RouterLink to="/">Badaro</RouterLink><span>센터·차량·배송지·배차 관리</span
       ><small>SK TMS Open API · 프론트엔드 데모</small>
     </footer>
   </div>

@@ -35,7 +35,7 @@ test('사진과 전역 폰트를 표시하고 로고를 눌러 워크스페이�
   await page.getByRole('button', { name: '동작 흐름', exact: true }).click()
   await expect(page).toHaveURL(/\/workspace\/flow$/)
   await page.reload()
-  await expect(page.getByRole('heading', { name: '눈으로 확인하는 동작 흐름' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '조회 처리 과정' })).toBeVisible()
   await page.goBack()
   await expect(page).toHaveURL(/\/workspace$/)
   await expect(page.locator('.ocean-transition')).toHaveCount(0)

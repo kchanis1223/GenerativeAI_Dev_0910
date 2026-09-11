@@ -1,6 +1,6 @@
 # Badaro · 물류 워크스페이스
 
-Vue 3 + TypeScript + Vite로 구현한 센터·차량·배송지 관리와 배차 흐름을 시연하는 프론트엔드입니다. `/Users/hwi/skala-workspace/skala-langchain` 폴더가 프로젝트 루트입니다.
+Vue 3 + TypeScript + Vite로 구현한 센터·차량·배송지 관리와 배차 흐름을 시연하는 프론트엔드입니다. 저장소를 clone한 폴더가 프로젝트 루트입니다.
 
 ## 실행
 
@@ -40,7 +40,7 @@ Vue Router로 URL, 뒤로가기, 직접 접속을 지원합니다. 정적 배포
 - 모바일 대응, 키보드 센터 선택 및 연결 설정 다이얼로그
 - 동일 출처 프록시를 통한 실제 API 호출 어댑터
 
-첨부된 `Agent_설계서_양식.md.docx`는 서비스 내용이 없는 양식이므로, 입력·Tool·응답 검증·오류 처리·테스트라는 설계 항목을 화면에 반영했습니다. **LLM/LangChain Agent, 자연어 분석, 실제 TMS 배차 최적화, 실제 지도 SDK, 백엔드는 구현하지 않았습니다.** 목업 검색과 검증은 실제로 실행되는 TypeScript 로직입니다.
+현재 화면에서는 입력 검증, API 응답 처리, 오류 복구를 시연할 수 있습니다. 검색·검증·목업 배차는 TypeScript로 실행됩니다. LLM/LangChain 에이전트, 자연어 분석, 실제 TMS 배차, 지도 SDK, 백엔드 연결은 개발 예정입니다.
 
 ## 배송 준비 순서
 
@@ -127,8 +127,8 @@ npm run test:e2e
 
 ## 로고
 
-사용자 제공 바다로 로고를 기반으로 한 투명 PNG는 `src/asset/badaro-logo.png`에 있습니다. 공통 `BadaroLogo.vue` 컴포넌트로 메인·헤더·푸터에 표시하며, `public/favicon.png`도 같은 이미지에서 만듭니다.
+바다로 로고의 투명 PNG는 `src/asset/badaro-logo.png`에 있습니다. 공통 `BadaroLogo.vue` 컴포넌트로 메인·헤더·푸터에 표시하며, `public/favicon.png`도 같은 이미지에서 만듭니다.
 
-이미지 도구의 배경 제거 결과에 불투명 체크무늬가 남아, 사용자 동의 후 로컬 처리로 알파 채널을 만들었습니다. 청록색 영역과 로고 내부의 밝은 파도 무늬를 보존하고 회색 배경을 제거했습니다. 결과는 2042×690 RGBA PNG이며 모서리와 빈 공간은 투명합니다. 추출 과정은 선택적 개발 도구인 `scripts/extract-logo.py`에 기록했습니다(Pillow·NumPy·SciPy 필요, 앱 실행에는 불필요).
+로고는 2042×690 RGBA PNG입니다. 청록색 로고와 내부 파도 무늬를 남기고 배경을 투명하게 처리했습니다. 추출 과정은 선택적 개발 도구인 `scripts/extract-logo.py`에 기록했습니다(Pillow·NumPy·SciPy 필요, 앱 실행에는 불필요).
 
 메인의 물고기 효과는 `src/components/JumpingFish.vue`에서 SVG와 CSS로 구현합니다. 데스크톱 3마리·모바일 2마리가 시차를 두고 두 번씩 뛰어오르며 꼬리·물방울·착수 물결이 함께 움직입니다. 장식 요소는 클릭을 가로채지 않고, 모션 감소 설정에서는 숨기며 탭이 비활성화되면 일시 정지합니다.
