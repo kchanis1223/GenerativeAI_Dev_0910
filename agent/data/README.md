@@ -47,3 +47,11 @@ TMAP API 성공이나 차량 출입구 좌표 검증을 뜻하지 않습니다.
 
 검증 코드 PR의 `agent/data/validate_samples.py`와 `agent/tests/test_sample_data.py`를
 함께 적용합니다. 실행 명령과 모델 커밋은 검증 결과 문서에 기록합니다.
+
+## 자동 검증
+
+`python3 agent/data/validate_samples.py` 또는 `npm run test:data`는 CSV·저장된 주소 근거와
+현재 체크아웃된 `agent/badaro/schemas/models.py`의 Order·Vehicle 모델을 함께 검사합니다.
+Python 3.11 이상과 `agent/requirements.txt` 의존성이 필요합니다. 모델 파일이나 의존성이
+없으면 실패하며, 기본 pytest도 모델 검증을 생략하지 않습니다. 별도 모델 비교는 `--models`로 지정합니다.
+품목별 적재량은 `inputYn=1`인 차량만 합산합니다. 사용 불가 차량도 행 형식은 검증합니다.

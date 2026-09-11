@@ -1,16 +1,16 @@
-"""B-04 CSV·저장된 주소 응답과 외부에서 지정한 B-03 모델을 오프라인 검증한다."""
+"""B-04 CSV·저장된 주소 응답과 현재 체크아웃된 Python 모델을 오프라인 검증한다."""
 
 import argparse
 import csv
 import importlib.util
 import json
-import sys
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 from zoneinfo import ZoneInfo
 
 DATA = Path(__file__).parent
+MODELS = DATA.parent / "badaro" / "schemas" / "models.py"
 STORAGE = {"활어": "live", "냉장": "refrigerated", "냉동": "frozen", "일반": "ambient"}
 VEHICLE_TYPES = {"활어": "99", "냉장": "02", "냉동": "02", "일반": "01"}
 
@@ -60,7 +60,7 @@ def vehicle_payload(row):
     }
 
 
-def validate(directory=DATA, models=None):
+def validate(directory=DATA, models=MODELS):
     centers, branches, vehicles, orders, proof, rejected = [rows(directory, name) for name in (
         "centers.csv", "branches.csv", "vehicles.csv", "delivery_orders.csv",
         "geocoding_results.csv", "geocoding_rejected.csv",
@@ -105,7 +105,7 @@ def validate(directory=DATA, models=None):
         group = [r for r in orders if r["itemType"] == category]
         require(len(group) == 10, "품목별 10건")
         capacity = sum(float(r["maxLoadKg"]) for r in vehicles
-                       if category in r["supportedItemTypes"].split("|"))
+                       if r["inputYn"] == "1" and category in r["supportedItemTypes"].split("|"))
         require(sum(float(r["deliveryWeight"]) for r in group) <= capacity, "품목별 적재량")
     require(len(proof) == len({row["entityId"] for row in proof}) == 21, "지오코딩 근거 수")
     for row in centers + branches:
@@ -156,8 +156,7 @@ def validate(directory=DATA, models=None):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--models", type=Path, help="검증할 B-03 models.py 경로")
+    parser.add_argument("--models", type=Path, default=MODELS,
+                        help="검증할 models.py (기본: 현재 체크아웃)")
     args = parser.parse_args()
-    if not args.models:
-        print("Python 모델 검증 미실행: --models로 B-03 models.py를 지정하세요.", file=sys.stderr)
     print(json.dumps(validate(models=args.models), ensure_ascii=False, indent=2))

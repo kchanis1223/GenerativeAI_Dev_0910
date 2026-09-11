@@ -1,7 +1,6 @@
 """CSV·저장된 주소 근거의 정상/손상 입력 및 Python 매핑 회귀 검증."""
 
 import csv
-import os
 import runpy
 import shutil
 from pathlib import Path
@@ -15,7 +14,9 @@ validate = helpers["validate"]
 
 def test_sample_data():
     assert validate() == {"branches": 20, "centers": 1, "orders": 40, "vehicles": 5,
-                          "weight_kg": 3125, "geocoding_exact": 21, "rejected": 4}
+                          "weight_kg": 3125, "geocoding_exact": 21, "rejected": 4,
+                          "Order": {"raw_rejected": 40, "mapped_passed": 40},
+                          "Vehicle": {"raw_rejected": 5, "mapped_passed": 5}}
 
 
 def test_units_and_deadline_are_preserved():
@@ -53,10 +54,30 @@ def test_invalid_data_is_rejected(tmp_path, filename, field, value):
         validate(tmp_path)
 
 
-def test_b03_models():
-    models = os.environ.get("BADARO_SCHEMA_FILE")
-    if not models:
-        pytest.skip("B-03 모델은 main 미병합: BADARO_SCHEMA_FILE로 고정 models.py를 지정하세요")
-    report = validate(models=Path(models))
-    assert report["Order"] == {"raw_rejected": 40, "mapped_passed": 40}
-    assert report["Vehicle"] == {"raw_rejected": 5, "mapped_passed": 5}
+@pytest.mark.parametrize("category,passes", [("냉동", False), ("활어", True)])
+def test_only_available_vehicles_supply_capacity(tmp_path, category, passes):
+    for source in DATA.glob("*.csv"):
+        shutil.copyfile(source, tmp_path / source.name)
+    records = helpers["rows"](tmp_path, "vehicles.csv")
+    vehicle = next(row for row in records if category in row["supportedItemTypes"].split("|"))
+    vehicle["inputYn"] = "0"
+    with (tmp_path / "vehicles.csv").open("w", encoding="utf-8-sig", newline="") as stream:
+        writer = csv.DictWriter(stream, fieldnames=list(records[0]))
+        writer.writeheader()
+        writer.writerows(records)
+    if passes:
+        assert validate(tmp_path)["Vehicle"]["mapped_passed"] == 5
+    else:
+        with pytest.raises(ValueError, match="품목별 적재량"):
+            validate(tmp_path)
+
+
+def test_changed_checkout_model_fails_validation(tmp_path):
+    shutil.copytree(DATA, tmp_path / "data")
+    models = tmp_path / "badaro" / "schemas" / "models.py"
+    models.parent.mkdir(parents=True)
+    models.write_text(helpers["MODELS"].read_text() +
+                      '\nclass Order(Order):\n    newly_required_field: str\n', encoding="utf-8")
+    from pydantic import ValidationError
+    with pytest.raises(ValidationError, match="newly_required_field"):
+        runpy.run_path(str(tmp_path / "data" / "validate_samples.py"))["validate"]()

@@ -6,19 +6,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - run: python -m pip install -r requirements.txt
         working-directory: agent
-      - name: Extract the reviewed B-03 model revision
-        run: |
-          git fetch --no-tags origin 5a8a8e76401a75289ce6886bf8d23c9b25b136bd
-          git show 5a8a8e76401a75289ce6886bf8d23c9b25b136bd:agent/badaro/schemas/models.py > "$RUNNER_TEMP/badaro-models.py"
-          echo "BADARO_SCHEMA_FILE=$RUNNER_TEMP/badaro-models.py" >> "$GITHUB_ENV"
-      - run: python data/validate_samples.py --models "$BADARO_SCHEMA_FILE"
+      - run: python data/validate_samples.py
         working-directory: agent
       - run: python -m pytest tests/test_sample_data.py
         working-directory: agent
