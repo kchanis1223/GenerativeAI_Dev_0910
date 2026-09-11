@@ -31,7 +31,7 @@ const links = [
         </button>
       </nav>
       <div class="header-actions">
-        <slot><span class="mock-badge">MOCK DEMO</span></slot>
+        <slot><span class="mock-badge">목업 모드</span></slot>
       </div>
     </div>
   </header>

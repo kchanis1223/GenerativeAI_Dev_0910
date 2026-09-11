@@ -69,7 +69,7 @@ function toggleAll(kind: 'orders' | 'vehicles') {
         <div class="page-container">
           <p class="workflow-eyebrow">TODAY’S DELIVERY</p>
           <h1>오늘의 배송 준비</h1>
-          <p class="logistics-intro">센터에서 마지막 배송지까지, 순서대로 준비해 보세요.</p>
+          <p class="logistics-intro">출발 센터, 주문, 차량을 선택하고 배차 조건을 설정하세요.</p>
           <nav aria-label="배차 진행 단계" class="workflow-steps">
             <ol>
               <li
@@ -349,7 +349,7 @@ function toggleAll(kind: 'orders' | 'vehicles') {
                 <div class="calculation-ripple" aria-hidden="true">
                   <span></span><span></span><span></span>
                 </div>
-                <h3>배송 계획을 계산하고 있어요</h3>
+                <h3>배송 계획을 계산하고 있습니다</h3>
                 <p>
                   {{
                     state.mappingKey
@@ -489,7 +489,7 @@ function toggleAll(kind: 'orders' | 'vehicles') {
       </div>
     </main>
     <footer class="logistics-footer">
-      <RouterLink to="/">Badaro</RouterLink><span>물류의 흐름을, 바다로.</span>
+      <RouterLink to="/">Badaro</RouterLink><span>센터·차량·배송지·배차 관리</span>
     </footer>
   </div>
 </template>

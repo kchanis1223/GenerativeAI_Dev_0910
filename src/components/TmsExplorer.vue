@@ -42,7 +42,7 @@ async function send() {
     <div class="tms-section-heading">
       <div>
         <h2>API 샘플 실행</h2>
-        <p>센터부터 교차금지선까지, 24개 API를 연결해 살펴보세요.</p>
+        <p>센터·차량·배송지 등 24개 API의 요청과 목업 응답을 확인합니다.</p>
       </div>
       <span class="tms-count">24 APIs</span>
     </div>
