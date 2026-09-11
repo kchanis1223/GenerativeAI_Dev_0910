@@ -47,3 +47,7 @@ TMAP API 성공이나 차량 출입구 좌표 검증을 뜻하지 않습니다.
 
 검증 코드 PR의 `agent/data/validate_samples.py`와 `agent/tests/test_sample_data.py`를
 함께 적용합니다. 실행 명령과 모델 커밋은 검증 결과 문서에 기록합니다.
+
+검증 코드 적용 후 루트에서 `npm run test:data`로 데이터·주소 근거를 검사합니다
+(Python 3.11 이상, 기본 검사는 표준 라이브러리만 사용). Python 모델 검증은 별도로
+Pydantic을 설치한 환경에서 `--models`를 지정해야 하며, 기본 명령은 모델 검증 미실행을 알립니다.

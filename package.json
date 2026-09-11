@@ -8,6 +8,7 @@
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview --host 127.0.0.1",
     "test": "vitest run",
+    "test:data": "python3 agent/data/validate_samples.py",
     "test:e2e": "playwright test",
     "lint": "eslint .",
     "format": "prettier --write .",
