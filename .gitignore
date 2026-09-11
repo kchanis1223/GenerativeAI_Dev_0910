@@ -6,3 +6,17 @@ dist/
 playwright-report/
 test-results/
 .DS_Store
+
+# Python / local development
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.ipynb_checkpoints/

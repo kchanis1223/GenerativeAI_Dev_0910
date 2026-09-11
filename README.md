@@ -1,92 +1,109 @@
-# Badaro · 배송 배차
+# 바다로 BadaRo 횟집 체인 배차 지원
 
-Vue 3 + TypeScript + Vite로 구현한 배차 시연 앱입니다. 기존 바다 랜딩에서 로고를 누르면 물길이 갈라지는 전환을 거쳐 배차 화면으로 진입합니다. 배차 화면은 왼쪽에 선택·결과, 오른쪽에 큰 지도를 배치합니다. 바다로 로고와 청록색 톤을 유지하고, 랜딩은 SSRO WaterDrop, 배차 화면은 JayeonSans를 사용합니다.
+바다로는 횟집 체인 본부의 물류 담당자를 위한 배차 지원 서비스입니다. 자연어 요청에서 배송 조건을 추출하고, 주문과 차량 정보를 확인해 TMAP TMS에 배차를 요청하도록 개발하고 있습니다. 활어 운송 시간, 차량 적재량, 지점별 납품시간을 고려합니다.
+
+현재 Vue 화면은 센터·차량·주문 선택과 배차 결과를 왼쪽 패널에, 배송 위치·경로를 오른쪽 지도에 표시합니다. 노량진센터와 서울 지점의 CSV 샘플로 목업 배차를 실행할 수 있습니다. Python 에이전트는 개발 폴더와 설치 환경을 준비했으며, 자연어 처리와 실제 배차 API 연결은 개발 예정입니다.
+
+> SKALA 생성형 AI 서비스 개발(LangChain) 종합실습 · 5층 6반 3조
+
+## 배차 처리 계획
+
+```mermaid
+flowchart LR
+  U[사용자 입력] --> S[조건 구조화<br/>DispatchRequest]
+  S --> C{필수값 충분?}
+  C -- 아니오 --> Q[되묻기]
+  C -- 예 --> T[주문·차량 조회]
+  T --> G[주소 → 좌표<br/>TMAP]
+  G --> D[배차 최적화<br/>TMAP TMS]
+  D --> V[결과 검증]
+  V --> R[차량별 계획 설명]
+```
+
+LLM은 해석·구조화·설명만 합니다. 차량 배정과 방문 순서는 TMS 결과를 그대로 쓰고, TMS가 주지 않은 값은 만들지 않습니다.
+
+## 구성
+
+| 구성                          | 위치     | 설명                                                                            |
+| ----------------------------- | -------- | ------------------------------------------------------------------------------- |
+| 에이전트 (Python · LangChain) | `agent/` | 패키지·개발 환경 준비. 자연어 처리와 Tool 통합은 개발 예정                      |
+| 화면 (Vue 3 · Vite)           | `src/`   | 센터·차량·주문 선택, 배차 진행 모달·결과, Leaflet 배송 지도. TMS 목업 내장      |
+| 문서                          | `docs/`  | 설계서, [TMS API 명세 정리](docs/tms-api.md), [프론트 가이드](docs/frontend.md) |
 
 ## 실행
 
-Node.js 22.12 이상이 필요하며 Node.js 26.7에서 검증했습니다.
+**화면**
 
 ```sh
 npm install
-npm run dev
+npm run dev          # http://127.0.0.1:5173
+npm test
 ```
 
-http://127.0.0.1:5173 의 `/`는 기존 물 표면·일렁이는 로고·뛰어오르는 물고기 랜딩입니다. 로고를 누르면 `/workspace`의 배차 화면으로 이동하며, 모션 감소 설정에서는 즉시 전환합니다. 배차 화면 헤더의 로고로 랜딩에 돌아갈 수 있습니다. 이전 관리 메뉴의 `/workspace/*` 주소는 `/workspace`로 연결됩니다. 정적 배포에서는 `index.html` SPA fallback을 설정합니다.
-
-## 화면 사용
-
-1. 왼쪽에서 출발 센터, 운행 차량, 배송할 주문을 선택합니다. 품목 필터에서 `전체 선택`은 현재 필터에 보이는 주문에만 적용됩니다.
-2. 출발 시간, 배분 기준, 센터 복귀 여부를 설정하고 **배차 요청**을 누릅니다.
-3. 중앙 모달에서 요청 수량과 경과 시간을 확인합니다. **닫기**는 계산을 유지하고 **배차 취소**는 결과 수신을 중단합니다. 계산 중에는 설정 변경과 중복 요청을 막습니다.
-4. 완료되면 같은 화면에 차량별 배송지·주문 수, 예상 운행 시간·거리, 중량·적재율을 표시합니다. 차량명을 누르면 해당 차량의 배송 순서·주소·희망시간·예상 도착/출발 시간을 펼칩니다.
-5. 차량별 체크박스로 지도 경로를 켜고 끄거나 **경로 모두 보기 / 경로 숨기기**를 사용합니다. 결과 영역을 접고 펼치거나 결과 JSON을 다운로드할 수 있습니다. 지도 크기는 결과를 펼쳐도 유지합니다.
-
-데스크톱은 왼쪽 약 44%·오른쪽 약 56%로 나뉩니다. 왼쪽 패널만 독립적으로 스크롤하고 지도는 헤더 아래 높이를 유지합니다. 배차 완료·차량 선택 시 결과로 스크롤합니다. 1100px 이하 화면에서는 선택·결과 다음에 지도를 배치합니다. 본문은 18px, 보조 글자는 15~16.5px, 화면 제목은 24px이며 버튼·아이콘·여백도 함께 확대했습니다.
-
-선택 조건을 변경하면 이전 결과를 초기화합니다. 차량이 없거나 적재 한도를 넘은 주문은 미배차 사유로 표시합니다. 요청 실패·조회 시간 초과 이후에는 선택을 유지한 채 다시 요청할 수 있습니다. 새로고침 시 초기 데이터로 돌아갑니다.
-
-## 기본 데이터
-
-`src/data/noryangjin.ts`가 `data/`의 CSV를 직접 읽습니다.
-
-| 데이터 | 구성                                                |
-| ------ | --------------------------------------------------- |
-| 센터   | 노량진센터 1곳                                      |
-| 지점   | 서울 실제 도로명 주소를 사용하는 가상 지점 20곳     |
-| 차량   | 활어차 2대, 냉장차 2대, 일반차 1대                  |
-| 주문   | 2026-09-11 배송 샘플 40건, 지점별 2품목, 총 3,125kg |
-
-품목별 운송 가능 여부를 구분합니다. 냉장차 1호는 냉장, 2호는 냉동 설정이 가능한 차량으로 가정하며 활어·일반 주문은 각각 해당 차량에 배정합니다. 배송 데이터 날짜는 헤더에 표시하며 실행 날짜에 맞춰 자동 변경하지 않습니다.
-
-기존 `executeTms(state, '/orderList')`와 같은 필드명으로 CSV를 읽습니다. `get_delivery_orders`라는 별도 백엔드 함수는 없습니다. 주소 20곳과 센터의 지오코딩 원본 응답 및 대조 결과, 전체 컬럼은 [데이터 안내서](data/README.md)를 참고하세요.
-
-## 배차·지도 구현 범위
-
-배차는 `/allocation → mappingKey → /allocationData` 흐름의 프론트엔드 목업입니다. 요청 당시 데이터를 보관하고 최대 12회 결과를 조회합니다. 차량 유형·품목·권역·적재 한도·투입 여부·교차금지선을 검사하고, 선택한 기준으로 주문을 배분합니다. 시간은 배송 데이터 날짜와 출발 시간을 기준으로 계산합니다.
-
-지도는 Leaflet과 OpenStreetMap 타일을 사용합니다. 실제 주소의 배송 위치와 차량별 색상·순서 번호를 표시합니다. 타일 로딩에는 인터넷 연결이 필요하며 실패하면 안내를 표시하고 배송 좌표는 유지합니다. [OpenStreetMap 타일 이용 정책](https://operations.osmfoundation.org/policies/tiles/)에 따라 출처를 표시하고 사전 다운로드하지 않습니다.
-
-**점선 경로는 좌표 간 직선이며 예상 시간은 시속 30km와 주문별 작업 시간을 합산한 시연 값입니다.** 실제 도로·교통·TMS 최적화 결과가 아닙니다. 납품 희망시간은 비교용으로 표시하며 시간창을 만족시키는 대기·최적화는 아직 계산하지 않습니다. 동일 지점의 서로 다른 품목은 개별 주문으로 처리합니다. 총 운행 시간은 차량별 시간 합계입니다.
-
-## API 연결 위치
-
-현재 UI는 목업 전용이며 API 키·백엔드·LangChain Agent를 포함하지 않습니다. 실제 응답을 받으면 `createDispatchConsole`의 `DispatchRequest` 어댑터를 서버 프록시에 연결하고 결과 형식을 정규화합니다. API 탐색 화면은 제거했지만 [24개 API 명세·목업 정책](docs/tms-api.md)과 `src/data/tms-api-catalog.json`, CRUD 엔진 및 검증은 유지합니다.
-
-`MockContext.centerId`, `deliveryDate`, `returnToCenter`는 공식 요청 JSON과 분리한 목업 실행 정보입니다. 화면의 복귀 체크박스는 이 목업 설정으로 차량 CSV의 기본 종착지보다 우선합니다. 실제 API에서 센터·배송일·차량 종착지의 대응 방식은 실제 명세와 응답에 맞춰 연결해야 합니다. 기존 센터 프록시 어댑터는 `src/services/centers.ts`에 보관되어 있습니다.
-
-## 주요 파일
-
-```text
-src/views/LandingView.vue               기존 바다·로고·물고기 랜딩
-src/components/OceanTransition.vue      바다 분할·줌 진입 전환
-src/views/DispatchConsoleView.vue       좌측 선택·결과 / 우측 지도 배차 화면
-src/stores/dispatch-console.ts          선택·요청·취소·결과 상태
-src/components/DispatchProgressModal.vue 계산 중 모달
-src/components/DeliveryMap.vue          실제 지도·직선 경로·배송 순서 마커
-src/data/noryangjin.ts                  CSV 기본 데이터 연결
-src/services/delivery-csv.ts            CSV 파싱·검증
-src/services/tms-mock.ts                명세 기반 CRUD·배차 목업
-src/style.css                          전역 폰트·청록색 반응형 스타일
-```
-
-바다로 로고는 `src/asset/badaro-logo.png`의 투명 PNG를 사용합니다. 기존 물 표면 사진·글꼴 등 원본 에셋도 보관합니다.
-
-## 검증
+**에이전트 개발 환경** (Python 3.11 이상, CI는 3.11)
 
 ```sh
-npm run lint
-npm run format:check
-npm run test
-npm run test:data
-npm run build
-npx playwright install chromium
-npm run test:e2e -- --workers=2
+cd agent
+python3 -m venv .venv
+source .venv/bin/activate    # Windows PowerShell: .venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+cp .env.example .env         # 아직 키를 입력하지 않아도 검증 가능
+python -m ruff check .
+USE_MOCK=1 python -m pytest
 ```
 
-단위 테스트는 CSV와 저장된 지오코딩 근거, 24개 API 계약, 품목·적재·복귀 계산, 비동기 취소·중복 요청·오류 복구·조회 제한을 검증합니다. 브라우저 테스트는 랜딩과 진입 전환·복귀·모션 감소, 좌우 분할과 독립 스크롤, 모달, 결과·경로 선택, 미배차, 다운로드, 기존 주소 호환, 모바일과 타일 실패를 검증합니다. 자동 테스트의 지도 타일은 고정 이미지로 대체합니다. 실제 SK API의 인증·도로 경로는 검증 범위에 포함되지 않습니다.
+현재 에이전트 테스트는 키 없이 패키지를 import하는 준비 단계만 검증합니다. 자연어 배차 실행은 B-17 통합 이후 제공하며, `USE_MOCK` 전환과 `.env` 로딩도 해당 구현에서 연결합니다. 프론트 목업은 지금 실행할 수 있습니다.
 
-## 화면 예시
+의존성은 `agent/pyproject.toml`에서 관리합니다. `requirements.txt`는 개발 도구를 포함한 패키지 설치 진입점입니다. 모델명은 설계서의 미확정 항목이므로 `.env.example`에서 비워 두었습니다.
 
-- [데스크톱 배차 화면](docs/screenshots/dispatch-desktop.png)
-- [모바일 배차 화면](docs/screenshots/dispatch-mobile.png)
-- [랜딩 화면](docs/screenshots/landing-desktop.png): 최대 1000px 로고에 배경 색조 블렌드와 흰 윤곽선·그림자를 적용합니다.
+키는 서버의 `agent/.env`에만 둡니다. TMS 배차 요청은 **하루 20건**이라 실호출은 담당자만 합니다.
+
+## 폴더 구조와 설계 기준
+
+```text
+agent/
+  badaro/
+    agent.py           # PM 통합 지점 (B-17)
+    schemas/           # 요청·결과 스키마 (B-03, B-05)
+    tools/             # 주문·차량 조회, 지오코딩, 배차 (B-08~10)
+    middleware/        # Context·State·Store, 실행 제어 (B-11~14)
+    guardrails/        # 입력·출력 검증 (B-14)
+  prompts/             # System Prompt·Few-shot (B-06)
+  data/                # 주문·차량 CSV와 목업 데이터 (B-04, B-10)
+  tests/               # Python 테스트 (B-16)
+  pyproject.toml       # Python 패키지·의존성·검증 설정
+  requirements.txt
+  .env.example
+src/                   # Vue 통합 배차 화면
+data/                  # 프론트 목업용 노량진 배송 CSV·지오코딩 기록
+tests/                 # 프론트 단위·브라우저 테스트
+docs/                  # 설계서·프론트 가이드·API 문서
+  api/                 # 인증키를 제거한 실 API 요청·응답 예시
+notebooks/             # 개인 실험, notebooks/본인이름/ 사용
+.github/               # CI·CODEOWNERS·PR 템플릿
+```
+
+[설계서 v1.2](docs/6반_3조_설계서_v1.2.docx)는 미들웨어·가드레일의 실행 순서, 결과 대조, 개인정보 보호와 실패 처리 기준을 보완한 개정본입니다. [v1.1](docs/6반_3조_설계서_v1.1.docx)과 [초안 v1](docs/6반_3조_설계서_v1.docx)도 보관합니다. 설계 기준이며 해당 기능의 구현 완료를 뜻하지 않습니다. [설계서와 코드의 대응 및 미확정 사항](docs/README.md)을 함께 확인하세요.
+
+CI는 프론트 lint·단위 테스트·build와 에이전트 Ruff·문법·import 테스트를 실행합니다. Python 업무 시나리오가 추가되면 같은 pytest 작업에서 실행됩니다. 브라우저 검증은 [프론트 가이드](docs/frontend.md)의 별도 명령을 사용합니다.
+
+## 팀
+
+| 이름   | 역할                | 담당                                                    |
+| ------ | ------------------- | ------------------------------------------------------- |
+| 김동찬 | PM / 아키텍트       | `agent/badaro/agent.py`, `README`, `docs/`, `.github/`  |
+| 이준형 | 모델 / 프롬프트     | `agent/badaro/schemas/`, `agent/prompts/`               |
+| 권유나 | API / Tool          | `agent/badaro/tools/`, `agent/data/`, `docs/tms-api.md` |
+| 윤소영 | 미들웨어 / 가드레일 | `agent/badaro/middleware/`, `agent/badaro/guardrails/`  |
+| 김강휘 | 프론트 / 테스트     | `src/`, `tests/`, `agent/tests/`                        |
+
+## 작업 절차
+
+1. [Issues](../../issues)에서 담당 이슈를 선택한다. 제목의 `[0-준비]` `[1-개발]` `[2-통합]` `[3-발표]`순서로 진행한다.
+2. `main`에서 `feat/영역-내용` 브랜치를 만든다. 이슈마다 브랜치를 만든다.
+3. 담당 폴더에서 작업한다. 다른 담당자의 파일 수정은 대상과 사유를 PR 본문에 적어 요청한다.
+4. PR을 만들기 전에 `git pull --rebase origin main`으로 최신 변경을 반영한다. 본문에 변경 사유를 적는다.
+5. 리뷰 1명 + CI 통과 → **Squash and merge** → 브랜치 삭제.
+6. 설계와 다르게 만들었으면 설계서 **변경 이력**에 사유를 남긴다.
+
+작업 규칙과 문구 작성 기준은 [CONTRIBUTING.md](CONTRIBUTING.md)를 따릅니다. 문제 해결이 30분 이상 지연되면 상황과 오류 내용을 팀에 공유합니다.
