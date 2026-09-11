@@ -103,7 +103,15 @@ def test_installed_wheel_loads_prompts_from_outside_repository(tmp_path: Path) -
                 "from badaro.tools._http import get; "
                 "reply = get('https://apis.openapi.sk.com/tms/allocationData', "
                 "params={'mappingKey': '<mapping-key>', 'routeYn': 'N'}, timeout=1); "
-                "assert reply.json()['vehicleList'][0]['vehicleId'] == 'badaro-b02-vehicle'"
+                "assert reply.json()['vehicleList'][0]['vehicleId'] == 'badaro-b02-vehicle'; "
+                "from badaro.agent import DispatchAgent; "
+                "from badaro.runtime.contracts import Settings; "
+                "from datetime import datetime; "
+                "from badaro.middleware import KST; "
+                "agent = DispatchAgent(Settings(), now=lambda: datetime(2026,9,11,tzinfo=KST)); "
+                "reply = agent.chat('2026-09-11 마포 서대문 은평 배차해줘'); "
+                "assert reply.status == 'completed', reply; "
+                "assert len(reply.result.routes) == 4"
             ),
         ],
         cwd=outside_dir,

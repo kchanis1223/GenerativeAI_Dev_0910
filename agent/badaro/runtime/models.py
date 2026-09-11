@@ -14,9 +14,23 @@ from .contracts import RequestDraft
 from .data import catalog
 
 
+def strict_schema(value):
+    """서버 기본값은 유지하되 OpenAI 출력 스키마는 모든 필드를 요구한다."""
+    if isinstance(value, list):
+        return [strict_schema(item) for item in value]
+    if not isinstance(value, dict):
+        return value
+    result = {key: strict_schema(item) for key, item in value.items() if key != "default"}
+    if result.get("type") == "object":
+        result.update(additionalProperties=False, required=list(result.get("properties", {})))
+    return result
+
+
 class OpenAIExtractor:
     def __init__(self, model):
-        self.chain = model.with_structured_output(RequestDraft, method="json_schema", strict=True)
+        self.chain = model.with_structured_output(
+            strict_schema(RequestDraft.model_json_schema()), method="json_schema", strict=True
+        )
 
     def extract(self, text, previous, defaults):
         instruction = (
