@@ -491,7 +491,8 @@ def test_review_4_error_text_is_masked():
     """오류 문구에 남은 인증키·전화번호가 최종 Tool 메시지로 나가면 안 된다."""
     from badaro.middleware.retry import safe_error_text
     err = ToolError(code=ToolErrorCode.UPSTREAM_ERROR,
-                    message="appKey=l7xx9f3c2a1b0d4e5f6a7b8c9d0e1f2a3b 로 호출 실패, 담당 010-1234-5678",
+                    message=("appKey=l7xx9f3c2a1b0d4e5f6a7b8c9d0e1f2a3b 로 호출 실패, "
+                             "담당 010-1234-5678"),
                     retryable=True)
     masked = safe_error_text(ToolErrorException(err))
     assert "l7xx9f3c" not in masked

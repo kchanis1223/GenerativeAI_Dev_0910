@@ -42,12 +42,16 @@ def get_cached_coord(store, tenant_id: str, address: str) -> dict[str, float] | 
 
 
 def put_cached_coord(store, tenant_id: str, address: str, lat: float, lon: float) -> None:
-    """지오코딩 성공분만 캐시에 넣는다. 실패(None)는 저장하지 않는다 — 틀린 좌표가 굳어지면 안 되니까."""
+    """지오코딩 성공분만 캐시에 넣는다.
+
+    실패(None)는 저장하지 않는다. 틀린 좌표가 굳어지면 안 된다.
+    """
     store.put(ns_geocode(tenant_id), address, {"lat": lat, "lon": lon})
 
 def append_audit(store, tenant_id: str, event: dict[str, Any]) -> None:
     """확정·변경·취소 이벤트를 누적 기록한다. 덮어쓰지 않고 타임스탬프 키로 계속 쌓는다."""
     from datetime import datetime
+
     from .context import KST
     key = datetime.now(KST).isoformat()
     store.put(ns_audit(tenant_id), key, event)
