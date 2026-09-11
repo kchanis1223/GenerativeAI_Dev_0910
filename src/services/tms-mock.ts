@@ -1,5 +1,5 @@
 import catalogJson from '../data/tms-api-catalog.json'
-import { newOrder, newVehicle, resources } from '../data/logistics'
+import { newOrder, newVehicle, resources } from '../data/tms-resources'
 import type {
   MockContext,
   ApiOperation,

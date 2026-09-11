@@ -1,10 +1,6 @@
-import { tmsState } from '../stores/tms'
-import type { Center, CenterResponse, Connection, Scenario } from '../types'
+import type { Center, CenterResponse } from '../types'
 
-export const API_REFERENCE = 'https://tms-skopenapi.readme.io/reference/센터-목록조회'
-export const API_URL = 'https://apis.openapi.sk.com/tms/centerList'
-export const REQUEST_TIMEOUT = 8000
-export const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
+const REQUEST_TIMEOUT = 8000
 
 export class CenterApiError extends Error {
   constructor(
@@ -67,18 +63,6 @@ export function validateResponse(value: unknown): CenterResponse {
   return data as unknown as CenterResponse
 }
 
-export function filterCenters(centers: Center[], query: string, region: string): Center[] {
-  const normalized = query.trim().toLocaleLowerCase('ko-KR')
-  return centers.filter(
-    (center) =>
-      (region === '전체' || center.address.startsWith(region)) &&
-      (!normalized ||
-        `${center.centerName} ${center.centerId} ${center.address}`
-          .toLocaleLowerCase('ko-KR')
-          .includes(normalized)),
-  )
-}
-
 // appKey is added by the development server proxy, never by the browser bundle.
 export function validateProxyEndpoint(endpoint: string): string {
   const normalized = endpoint.trim()
@@ -91,32 +75,8 @@ export function validateProxyEndpoint(endpoint: string): string {
   return normalized
 }
 
-export async function requestCenters(
-  connection: Connection,
-  scenario: Scenario = 'success',
-): Promise<unknown> {
-  if (connection.mode === 'mock') {
-    await wait(scenario === 'timeout' ? 1400 : 650)
-    if (scenario === 'unauthorized')
-      throw new CenterApiError('인증에 실패했습니다. 연결 서버의 appKey를 확인하세요.', '401')
-    if (scenario === 'timeout')
-      throw new CenterApiError('요청 시간이 초과되었습니다. 잠시 후 다시 실행하세요.', 'TIMEOUT')
-    if (scenario === 'invalid')
-      return {
-        resultCode: '200',
-        resultCount: 1,
-        resultMessage: 'success',
-        resultData: [{ centerId: 'invalid_demo' }],
-      }
-    const centers = scenario === 'empty' ? [] : tmsState.centers.map((c) => ({ ...c }))
-    return {
-      resultCode: '200',
-      resultCount: centers.length,
-      resultMessage: 'success',
-      resultData: centers,
-    }
-  }
-  const endpoint = validateProxyEndpoint(connection.endpoint)
+export async function requestCenters(proxyEndpoint: string): Promise<unknown> {
+  const endpoint = validateProxyEndpoint(proxyEndpoint)
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT)
   try {
