@@ -1,6 +1,6 @@
 # 설계 및 개발 문서
 
-[설계서 초안 v1](6반_3조_설계서_v1.docx)은 제공받은 원본입니다. 파일명 v1과 문서 내부 변경 이력 v0.2를 구분하며, 이번 저장소 구조 정리에서는 본문과 서식을 수정하지 않았습니다.
+[설계서 v1.1](6반_3조_설계서_v1.1.docx)은 설명 문구를 정리한 개정본입니다. 기능 요건과 테스트 기준은 유지했습니다. [초안 v1](6반_3조_설계서_v1.docx)은 원본이며 문서 내부 최신 변경 이력은 v0.2입니다.
 
 ## 문서별 용도
 
@@ -12,9 +12,9 @@
 
 ## 설계와 코드 연결
 
-설계서 2.4의 `DispatchRequest`·`DispatchResult`는 `agent/badaro/schemas/`, 2.5의 네 Tool은 `agent/badaro/tools/`에서 구현합니다. 3.1~3.3의 Context·State·Store와 Middleware·Guardrails는 각 담당 패키지에 두고, PM이 `agent/badaro/agent.py`에서 통합합니다. 현재 이 위치들은 패키지 뼈대이며 업무 로직은 없습니다.
+설계서 2.4의 `DispatchRequest`·`DispatchResult`는 `agent/badaro/schemas/`, 2.5의 네 Tool은 `agent/badaro/tools/`에서 구현합니다. 3.1~3.3의 Context·State·Store와 Middleware·Guardrails는 각 담당 패키지에 두고, PM이 `agent/badaro/agent.py`에서 통합합니다. 현재는 패키지 폴더만 준비되어 있으며 업무 로직은 없습니다.
 
-초기 이슈의 `src/badaro/`와 루트 Python `tests/`는 최신 협업 규칙에 따라 각각 `agent/badaro/`, `agent/tests/`로 해석합니다. 루트 `src/`와 `tests/`는 Vue 전용입니다. Streamlit은 초기 B-15 계획이고 현재 화면은 Vue이므로, Python 데모 UI 추가 여부는 프론트 담당자와 통합 시 확정합니다.
+초기 이슈의 `src/badaro/`와 루트 Python `tests/`는 최신 협업 규칙에 따라 각각 `agent/badaro/`, `agent/tests/`로 해석합니다. 루트 `src/`와 `tests/`는 Vue 전용입니다. 2026-09-11 PM 결정에 따라 #15는 기존 Vue 화면에 Python 에이전트를 연결합니다. 서버 호출 방식은 #15·#17에서 정합니다.
 
 ## 통합 전 확인할 항목
 

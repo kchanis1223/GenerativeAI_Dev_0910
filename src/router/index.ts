@@ -35,6 +35,6 @@ router.afterEach((to) => {
       ? '동작 흐름'
       : to.params.page === 'history'
         ? '실행 기록'
-        : '센터 워크스페이스')
+        : '센터 조회')
   document.title = to.name === 'home' ? 'Badaro' : `${section} · Badaro`
 })
