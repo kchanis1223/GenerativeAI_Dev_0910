@@ -4,7 +4,6 @@ import { RouterLink, useRoute } from 'vue-router'
 import WorkspaceHeader from '../components/WorkspaceHeader.vue'
 import TmsResources from '../components/TmsResources.vue'
 import TmsExplorer from '../components/TmsExplorer.vue'
-import TmsDispatch from '../components/TmsDispatch.vue'
 import { tmsLogs, tmsState } from '../stores/tms'
 import '../logistics.css'
 const route = useRoute()
@@ -12,18 +11,13 @@ const section = computed(() => String(route.params.section))
 const pages: Record<string, { title: string; intro: string; steps: string[] }> = {
   vehicles: {
     title: '차량 정보 관리',
-    intro: '배송의 시작, 차량과 적재 정보를 준비하세요.',
-    steps: ['차량 정보', '배송지 정보', '배차 요청', '결과 확인'],
+    intro: '차량과 적재 정보를 관리하세요.',
+    steps: [],
   },
   orders: {
-    title: '배송지 정보 관리',
+    title: '주문 정보 관리',
     intro: '배송할 장소와 물량을 한곳에서 관리하세요.',
-    steps: ['차량 정보', '배송지 정보', '배차 요청', '결과 확인'],
-  },
-  dispatch: {
-    title: '배차 요청하기',
-    intro: '준비된 정보를 연결해 배송 흐름을 그려보세요.',
-    steps: ['차량 정보', '배송지 정보', '배차 요청', '결과 확인'],
+    steps: [],
   },
   api: {
     title: 'API 살펴보기',
@@ -45,7 +39,7 @@ const latest = computed(() => tmsLogs[0])
         <div class="page-container">
           <h1>{{ page.title }}</h1>
           <p class="logistics-intro">{{ page.intro }}</p>
-          <ol class="logistics-steps">
+          <ol v-if="page.steps.length" class="logistics-steps">
             <li v-for="(label, i) in page.steps" :key="label" :class="{ active: i === stepIndex }">
               <span>{{ label }}</span>
             </li>
@@ -58,7 +52,7 @@ const latest = computed(() => tmsLogs[0])
             <TmsResources
               v-if="section === 'vehicles' || section === 'orders'"
               :initial="section"
-            /><TmsDispatch v-else-if="section === 'dispatch'" /><TmsExplorer v-else />
+            /><TmsExplorer v-else />
           </div>
           <aside class="logistics-summary">
             <h2>준비된 정보</h2>
@@ -95,8 +89,8 @@ const latest = computed(() => tmsLogs[0])
             <p class="tms-notice">
               목업 데이터로 동작합니다.<br />변경 내용은 새로고침하면 초기화됩니다.
             </p>
-            <RouterLink to="/workspace/dispatch" class="tms-primary summary-link"
-              >배차 요청하기 <span>→</span></RouterLink
+            <RouterLink to="/workspace" class="tms-primary summary-link"
+              >배송 준비 이어가기 <span>→</span></RouterLink
             ><RouterLink to="/workspace/api" class="summary-api"
               >24개 API 예제 살펴보기 ↗</RouterLink
             >

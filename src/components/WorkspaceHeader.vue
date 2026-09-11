@@ -4,10 +4,10 @@ import BadaroLogo from './BadaroLogo.vue'
 const route = useRoute()
 const router = useRouter()
 const links = [
-  { path: '/workspace', label: '센터 워크스페이스' },
+  { path: '/workspace', label: '배송 준비' },
+  { path: '/workspace/centers', label: '센터 정보' },
+  { path: '/workspace/orders', label: '주문 관리' },
   { path: '/workspace/vehicles', label: '차량 정보' },
-  { path: '/workspace/orders', label: '배송지 정보' },
-  { path: '/workspace/dispatch', label: '배차 요청' },
   { path: '/workspace/api', label: 'API 탐색' },
   { path: '/workspace/flow', label: '동작 흐름' },
   { path: '/workspace/history', label: '실행 기록' },

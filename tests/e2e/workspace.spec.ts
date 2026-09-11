@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import { mockCenters } from '../../src/data/centers'
 
 async function ready(page: import('@playwright/test').Page) {
-  await page.goto('/workspace')
+  await page.goto('/workspace/centers')
   await expect(page.getByText('정상 완료', { exact: true })).toBeVisible()
 }
 

@@ -1,31 +1,5 @@
 import { expect, test } from '@playwright/test'
 
-test('차량 수정이 배차에 반영되고 요청 키와 미배차 사유를 확인한다', async ({ page }) => {
-  const errors: string[] = []
-  page.on('pageerror', (e) => errors.push(e.message))
-  await page.goto('/workspace/vehicles')
-  await expect(page.locator('.tms-records > li')).toHaveCount(6)
-  const refrigerated = page.locator('.tms-records > li').filter({ hasText: '서울 냉장 01' })
-  await refrigerated.getByRole('button', { name: '수정', exact: true }).click()
-  await page.getByLabel('inputYn', { exact: false }).selectOption('0')
-  await page.getByRole('button', { name: '저장', exact: true }).click()
-  await expect(page.getByRole('status')).toContainText('성공')
-  await page.getByRole('button', { name: '배차 요청', exact: true }).click()
-  await page.getByRole('button', { name: '배차 요청하기', exact: true }).click()
-  await expect(page.locator('.dispatch-totals')).toBeVisible()
-  await expect(page.locator('.mapping-key')).toContainText('mock-')
-  await expect(page.locator('.unassigned')).toContainText('강남 냉장지점')
-  await expect(page.locator('.unassigned')).toContainText('동일한 차량 유형이 없습니다.')
-  await expect(page.getByRole('img', { name: '배송 순서 직선 경로도' })).toBeVisible()
-  await page.screenshot({ path: 'test-results/dispatch-desktop.png', fullPage: true })
-  await page.getByLabel('경로 데이터', { exact: true }).selectOption('N')
-  await expect(page.getByText('조건이 변경되었습니다.', { exact: false })).toBeVisible()
-  await page.getByRole('button', { name: '배차 요청하기', exact: true }).click()
-  await expect(page.getByText('경로 데이터 제외로 요청하여 배송 순서만 표시합니다.')).toBeVisible()
-  await expect(page.locator('.route-diagram')).toHaveCount(0)
-  expect(errors).toEqual([])
-})
-
 test('API 탐색으로 일괄 등록하고 목록과 오류 응답을 확인한다', async ({ page }) => {
   await page.goto('/workspace/api')
   await expect(page.getByLabel('API 선택').locator('option')).toHaveCount(24)
@@ -38,24 +12,10 @@ test('API 탐색으로 일괄 등록하고 목록과 오류 응답을 확인한�
   await page.getByLabel('응답 시나리오').selectOption('unauthorized')
   await page.getByRole('button', { name: '목업 실행', exact: true }).click()
   await expect(page.locator('.api-response')).toContainText('"resultCode": "401"')
-  await page.getByRole('button', { name: '배송지 정보', exact: true }).click()
+  await page.getByRole('button', { name: '주문 관리', exact: true }).click()
   await expect(page.locator('.tms-records > li')).toHaveCount(10)
   await page.getByRole('button', { name: '실행 기록', exact: true }).click()
   await expect(page.locator('.tms-history details')).toHaveCount(3)
-})
-
-test('모바일 차량 관리와 선택 배차가 화면 안에 표시된다', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 })
-  await page.goto('/workspace/vehicles')
-  await page.getByRole('button', { name: '등록', exact: true }).click()
-  await expect(page.getByLabel('vehicleName')).toBeVisible()
-  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390)
-  await page.screenshot({ path: 'test-results/vehicles-mobile.png', fullPage: true })
-  await page.getByRole('button', { name: '배차 요청', exact: true }).click()
-  await page.getByLabel('배차 대상').selectOption('2')
-  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390)
-  await page.getByRole('button', { name: '배차 요청하기', exact: true }).click()
-  await expect(page.locator('.dispatch-totals')).toBeVisible()
 })
 
 test('로고 클릭 시 바다 전환을 거쳐 입장하고 시작하기 버튼은 없다', async ({ page }) => {

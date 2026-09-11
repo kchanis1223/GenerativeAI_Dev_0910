@@ -45,7 +45,7 @@ const activePage = computed<'centers' | 'flow' | 'history'>({
   get: () =>
     route.params.page === 'flow' ? 'flow' : route.params.page === 'history' ? 'history' : 'centers',
   set: (page) => {
-    void router.push(page === 'centers' ? '/workspace' : `/workspace/${page}`)
+    void router.push(page === 'centers' ? '/workspace/centers' : `/workspace/${page}`)
   },
 })
 const activeSection = ref(0)

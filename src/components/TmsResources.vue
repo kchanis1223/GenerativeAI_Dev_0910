@@ -4,7 +4,7 @@ import { resources } from '../data/logistics'
 import { apiCatalog, vehicleTypes } from '../services/tms-mock'
 import { callTms, sampleRequest, tmsState } from '../stores/tms'
 import type { Resource, TmsPayload, TmsRow } from '../types/tms'
-const props = defineProps<{ initial: Resource }>()
+const props = defineProps<{ initial: Resource; fixedResource?: boolean }>()
 const resource = ref<Resource>(props.initial)
 watch(
   () => props.initial,
@@ -88,7 +88,7 @@ function description(row: TmsRow) {
 }
 </script>
 <template>
-  <div class="resource-tabs" aria-label="데이터 종류">
+  <div v-if="!fixedResource" class="resource-tabs" aria-label="데이터 종류">
     <button
       v-for="(item, key) in resources"
       :key="key"

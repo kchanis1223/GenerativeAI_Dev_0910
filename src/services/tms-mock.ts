@@ -1,6 +1,7 @@
 import catalogJson from '../data/tms-api-catalog.json'
 import { newOrder, newVehicle, resources } from '../data/logistics'
 import type {
+  MockContext,
   ApiOperation,
   DispatchResult,
   Resource,
@@ -260,7 +261,12 @@ const formatTime = (ms: number) => {
     pad = (v: number) => String(v).padStart(2, '0')
   return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}`
 }
-export function planAllocation(state: TmsState, params: TmsPayload, now: number): DispatchResult {
+export function planAllocation(
+  state: TmsState,
+  params: TmsPayload,
+  now: number,
+  context: MockContext = {},
+): DispatchResult {
   if (!['1', '2'].includes(text(params, 'allocationType'))) fail('allocationType은 1 또는 2입니다.')
   if (!/^([01]\d|2[0-3])[0-5]\d$/.test(text(params, 'startTime')))
     fail('startTime은 HHmm 형식의 유효한 시간이어야 합니다.')
@@ -291,8 +297,11 @@ export function planAllocation(state: TmsState, params: TmsPayload, now: number)
   const orders = pick(state.orders, 'orderId', params.orderIdList)
   if (!vehicles.length) fail('투입 가능한 차량이 없습니다.')
   if (!orders.length) fail('배차할 배송지가 없습니다.')
-  const center = state.centers[0]!,
-    origin = point(center)
+  const center = context.centerId
+    ? state.centers.find((c) => c.centerId === context.centerId)
+    : state.centers[0]
+  if (!center) return fail('선택한 센터를 찾을 수 없습니다.', '404')
+  const origin = point(center)
   const lines = state.banLines.map((r) => parseLine(text(r, 'lineData')))
   const blocked = (a: Point, b: Point) =>
     lines.some((line) => line.slice(1).some((p, i) => intersects(a, b, line[i]!, p)))
@@ -437,7 +446,7 @@ export function planAllocation(state: TmsState, params: TmsPayload, now: number)
       routing: '직선 거리·가정 속도 기반 시연. 실제 도로 경로 및 TMS 최적화 결과가 아닙니다.',
       unassigned,
       assumptions: [
-        '첫 번째 등록 센터에서 출발',
+        `출발 센터: ${center.centerName} (${center.centerId})`,
         '직선 거리와 시속 30km로 시간 추정',
         '중량 ton→kg 환산, 부피 0은 제한 미설정으로 처리',
         '숙련도는 배차 우선순위에 반영하는 목업 규칙',
@@ -452,6 +461,7 @@ export function executeTms(
   path: string,
   raw: TmsPayload = {},
   now = Date.now(),
+  context: MockContext = {},
 ): TmsPayload {
   const operation = apiCatalog.find((o) => o.path === path)
   if (!operation) return fail('지원하지 않는 API입니다.', '404')
@@ -460,7 +470,7 @@ export function executeTms(
   const input = normalizedPayload(raw)
   validateParameters(operation, input)
   if (path === '/allocation') {
-    const result = planAllocation(state, input, now)
+    const result = planAllocation(state, input, now, context)
     const mappingKey = `mock-${now}-${state.nextSeq++}`
     state.jobs[mappingKey] = { readyAt: now + 1200, result: clone(result) }
     const keys = Object.keys(state.jobs)

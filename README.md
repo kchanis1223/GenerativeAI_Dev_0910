@@ -11,15 +11,16 @@ npm install
 npm run dev
 ```
 
-브라우저에서 http://127.0.0.1:5173 을 엽니다. 메인에서 바다로 로고를 누르면 바다가 양옆으로 갈라지며 줌 인한 뒤 센터 워크스페이스로 이동합니다. 워크스페이스는 API 키 없이 목업 조회를 실행합니다.
+브라우저에서 http://127.0.0.1:5173 을 엽니다. 메인에서 바다로 로고를 누르면 바다가 양옆으로 갈라지며 줌 인한 뒤 8단계 배송 준비 화면으로 이동합니다. API 키 없이 센터·주문·차량을 선택하고 목업 배차를 실행할 수 있습니다.
 
 ## 메인 페이지와 라우터
 
 - `/`: 물 표면 사진, 일렁이는 바다로 로고, 뛰어오르는 작은 물고기를 표시합니다. 로고가 진입 링크입니다.
-- `/workspace`: 센터 조회 화면
+- `/workspace`: 센터 선택부터 차량별 배송 상세까지 이어지는 8단계 배송 준비
+- `/workspace/centers`: 기존 센터 조회·검색·상세 화면
 - `/workspace/vehicles`: 차량·센터·권역·교차금지선 관리
 - `/workspace/orders`: 배송지 관리
-- `/workspace/dispatch`: 배차 조건, 요청 키, 결과·미배차 사유
+- `/workspace/dispatch`: `/workspace`로 이동하는 기존 주소 호환 경로
 - `/workspace/api`: 24개 API의 필드·공식 예제·목업 실행
 - `/workspace/flow`: 동작 흐름
 - `/workspace/history`: 실행 기록
@@ -40,6 +41,21 @@ Vue Router로 URL, 뒤로가기, 직접 접속을 지원합니다. 정적 배포
 - 동일 출처 프록시를 통한 실제 API 호출 어댑터
 
 첨부된 `Agent_설계서_양식.md.docx`는 서비스 내용이 없는 양식이므로, 입력·Tool·응답 검증·오류 처리·테스트라는 설계 항목을 화면에 반영했습니다. **LLM/LangChain Agent, 자연어 분석, 실제 TMS 배차 최적화, 실제 지도 SDK, 백엔드는 구현하지 않았습니다.** 목업 검색과 검증은 실제로 실행되는 TypeScript 로직입니다.
+
+## 배송 준비 순서
+
+1. 출발 센터 선택
+2. 오늘 배송할 주문 등록/선택
+3. 운행 가능한 차량 선택
+4. 배차 조건 설정
+5. 요청 전 선택 정보 확인 및 배차 요청
+6. 계산 중 — 요청 키를 발급받아 결과 조회
+7. 배차 결과 및 미배차 사유 확인
+8. 차량별 배송 순서·예상시간·경로 확인
+
+센터·주문·차량을 선택하지 않으면 다음 단계로 이동할 수 없습니다. 주문은 2단계 안에서 등록할 수 있고, 운행 제외 차량은 선택할 수 없습니다. 입력한 선택은 이전 단계 및 보조 메뉴 이동 후에도 유지됩니다. 선택 데이터가 삭제되거나 차량이 운행 제외로 변경되면 선택에서 제거하며, 이미 받은 결과는 초기화해 다시 요청하도록 안내합니다. 계산 중에는 중복 요청과 단계 이동을 막고, 실패 시 선택을 유지한 채 요청 확인 단계로 돌아옵니다.
+
+선택한 센터의 좌표가 목업 배차 출발·복귀 계산에 반영됩니다. 공식 `/allocation` 필드에는 센터 ID가 없어, `centerId`는 API 요청 JSON이 아닌 별도의 목업 실행 정보로 전달하고 실행 기록에도 구분해 남깁니다. 실제 API 연결 시 센터 선택과의 대응 방식은 별도 확인이 필요합니다.
 
 ## 확장 목업
 
@@ -78,7 +94,9 @@ src/views/WorkspaceView.vue   조회 화면과 실행 상태 관리
 src/components/OceanTransition.vue 바다 분할·줌 전환
 src/views/LogisticsView.vue    차량·배송지·배차·API 화면
 src/components/TmsResources.vue 데이터 편집
-src/components/TmsDispatch.vue 배차 요청과 결과
+src/views/DispatchWorkflowView.vue 8단계 배송 준비 화면
+src/stores/dispatch-workflow.ts 선택·진행·계산·결과 세션 상태
+src/components/DispatchRouteDetails.vue 차량별 배송 순서·시간·경로
 src/components/TmsExplorer.vue API 예제 실행
 src/stores/tms.ts             세션 데이터·API 로그
 src/services/tms-mock.ts      CRUD·배차 목업 엔진

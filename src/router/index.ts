@@ -6,12 +6,18 @@ export const router = createRouter({
   routes: [
     { path: '/', name: 'home', component: LandingView },
     {
-      path: '/workspace/:page(flow|history)?',
+      path: '/workspace',
+      name: 'dispatch-workflow',
+      component: () => import('../views/DispatchWorkflowView.vue'),
+    },
+    { path: '/workspace/dispatch', redirect: '/workspace' },
+    {
+      path: '/workspace/:page(centers|flow|history)',
       name: 'workspace',
       component: () => import('../views/WorkspaceView.vue'),
     },
     {
-      path: '/workspace/:section(vehicles|orders|dispatch|api)',
+      path: '/workspace/:section(vehicles|orders|api)',
       name: 'logistics',
       component: () => import('../views/LogisticsView.vue'),
     },
@@ -36,5 +42,10 @@ router.afterEach((to) => {
       : to.params.page === 'history'
         ? '실행 기록'
         : '센터 워크스페이스')
-  document.title = to.name === 'home' ? 'Badaro' : `${section} · Badaro`
+  document.title =
+    to.name === 'home'
+      ? 'Badaro'
+      : to.name === 'dispatch-workflow'
+        ? '오늘의 배송 준비 · Badaro'
+        : `${section} · Badaro`
 })

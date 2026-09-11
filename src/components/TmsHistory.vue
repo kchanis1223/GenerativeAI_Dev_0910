@@ -16,6 +16,9 @@ import { tmsLogs } from '../stores/tms'
         }}</span>
         {{ log.title }} <small>{{ log.time }} · {{ log.duration }}ms</small>
       </summary>
+      <p v-if="log.mockContext" class="history-empty">
+        목업 출발 센터: {{ log.mockContext.centerId }}
+      </p>
       <h3>{{ log.method }} {{ log.path }} · 요청</h3>
       <pre>{{ JSON.stringify(log.request, null, 2) }}</pre>
       <h3>응답</h3>

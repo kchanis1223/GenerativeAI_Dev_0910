@@ -27,7 +27,7 @@ test('사진과 전역 폰트를 표시하고 로고를 눌러 워크스페이�
   await page.getByRole('link', { name: '바다로 워크스페이스 입장' }).click()
   await expect(page).toHaveURL(/\/workspace$/)
   await expect(page.locator('.ocean-transition')).toHaveCount(0)
-  await expect(page.getByText('정상 완료', { exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '1. 센터 선택', exact: true })).toBeVisible()
   await page.evaluate(() => document.fonts.ready)
   expect(await page.evaluate(() => document.fonts.check('16px JayeonSans'))).toBe(true)
   await expect(page.getByRole('searchbox')).toHaveCSS('font-family', /JayeonSans/)
