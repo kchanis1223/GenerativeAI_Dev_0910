@@ -337,3 +337,55 @@ def test_execute_optimize_dispatch_does_not_use_destination_id_as_geocode_key() 
         execute_optimize_dispatch(["ORDER-001"], ["VEHICLE-001"], None, context)
 
     assert exc_info.value.error.code is ToolErrorCode.MISSING_CONTEXT
+
+
+@pytest.mark.parametrize("match_flag", ["M11", "M21"])
+def test_geocode_lot_exact_uses_lot_coordinates(match_flag) -> None:
+    from importlib import import_module
+
+    module = import_module("badaro.tools.geocode_address")
+    result = module._parse_response("서울 중구 명동 1", {
+        "coordinateInfo": {"totalCount": "1", "coordinate": [{
+            "matchFlag": match_flag, "lat": "37.5", "lon": "126.9",
+            "newMatchFlag": "N55", "newLat": "37.6", "newLon": "127.0",
+            "city_do": "서울", "gu_gun": "중구", "legalDong": "명동", "bunji": "1",
+        }]},
+    })
+    assert result.status is GeocodeStatus.OK
+    assert result.candidates[0].lat == 37.5
+    assert result.candidates[0].lon == 126.9
+    assert result.candidates[0].matched_address == "서울 중구 명동 1"
+
+
+@pytest.mark.parametrize("lat,lon", [("91", "126.9"), ("37.5", "181"), ("nan", "127")])
+def test_geocode_invalid_coordinate_uses_common_error(lat, lon) -> None:
+    from importlib import import_module
+
+    module = import_module("badaro.tools.geocode_address")
+    with pytest.raises(ToolErrorException) as exc_info:
+        module._parse_response("검증용 주소", {
+            "coordinateInfo": {"totalCount": "1", "coordinate": [{
+                "newMatchFlag": "N51", "newLat": lat, "newLon": lon,
+            }]},
+        })
+    assert exc_info.value.error.code is ToolErrorCode.UPSTREAM_ERROR
+    assert exc_info.value.error.retryable is False
+
+
+@pytest.mark.parametrize("status,code,retryable", [
+    (401, ToolErrorCode.UNAUTHORIZED, False),
+    (429, ToolErrorCode.RATE_LIMITED, True),
+    (503, ToolErrorCode.UPSTREAM_ERROR, True),
+])
+def test_geocode_http_error_calls_once(monkeypatch, status, code, retryable) -> None:
+    from importlib import import_module
+    from unittest.mock import Mock
+
+    module = import_module("badaro.tools.geocode_address")
+    get = Mock(return_value=type("Response", (), {"status_code": status})())
+    monkeypatch.setattr(module.httpx, "get", get)
+    with pytest.raises(ToolErrorException) as exc_info:
+        module._request_once({"appKey": "test-placeholder"})
+    assert get.call_count == 1
+    assert exc_info.value.error.code is code
+    assert exc_info.value.error.retryable is retryable

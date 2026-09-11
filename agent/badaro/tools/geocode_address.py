@@ -124,8 +124,13 @@ def _parse_response(input_address: str, payload: dict[str, Any]) -> GeocodeResul
                 "TMAP 좌표 항목 구조가 올바르지 않습니다",
                 False,
             )
-        lat = item.get("newLat") or item.get("lat")
-        lon = item.get("newLon") or item.get("lon")
+        road_exact = item.get("newMatchFlag") == "N51"
+        lot_exact = item.get("matchFlag") in {"M11", "M21"}
+        use_road = road_exact or (
+            not lot_exact and bool(item.get("newLat")) and bool(item.get("newLon"))
+        )
+        lat = item.get("newLat") if use_road else item.get("lat")
+        lon = item.get("newLon") if use_road else item.get("lon")
         try:
             lat_value, lon_value = float(lat), float(lon)
         except (TypeError, ValueError) as exc:
@@ -133,16 +138,19 @@ def _parse_response(input_address: str, payload: dict[str, Any]) -> GeocodeResul
             raise AssertionError("unreachable") from exc
         if not math.isfinite(lat_value) or not math.isfinite(lon_value):
             _raise_error(ToolErrorCode.UPSTREAM_ERROR, "TMAP 좌표 값이 유효하지 않습니다", False)
+        if not -90 <= lat_value <= 90 or not -180 <= lon_value <= 180:
+            _raise_error(
+                ToolErrorCode.UPSTREAM_ERROR, "TMAP 좌표가 허용 범위를 벗어났습니다", False
+            )
+        address_fields = (
+            ("city_do", "gu_gun", "newRoadName", "newBuildingIndex", "newBuildingName")
+            if use_road else
+            ("city_do", "gu_gun", "eup_myun", "legalDong", "ri", "bunji", "buildingName")
+        )
         matched_address = (
             " ".join(
                 str(item.get(key, "")).strip()
-                for key in (
-                    "city_do",
-                    "gu_gun",
-                    "newRoadName",
-                    "newBuildingIndex",
-                    "newBuildingName",
-                )
+                for key in address_fields
                 if item.get(key)
             )
             or input_address
@@ -150,7 +158,8 @@ def _parse_response(input_address: str, payload: dict[str, Any]) -> GeocodeResul
         candidates.append(
             GeocodeCandidate(matched_address=matched_address, lat=lat_value, lon=lon_value)
         )
-        if item.get("newMatchFlag") == "N51" or item.get("matchFlag") == "Y":
+        is_exact = road_exact if use_road else lot_exact
+        if is_exact:
             exact_candidates.append(candidates[-1])
 
     if not candidates:
