@@ -22,4 +22,4 @@
 
 ## 이전 기록
 
-v1·v1.1·v1.2·v1.3·v1.5 DOCX는 당시 설계를 보관한 자료다. [v1 대조 기록](archive/design-notes-v1.md)의 미구현·미정 표시는 당시 상태이며 현재 완료 여부로 사용하지 않는다.
+이전 설계서 DOCX와 초기 PDF는 [정리 전 Git 이력](https://github.com/kchanis1223/GenerativeAI_Dev_0910/tree/208ef80/docs)에서 확인한다. 현재 폴더에는 v2와 사용자 수정 원본을 보관한다. [v1 대조 기록](archive/design-notes-v1.md)의 미구현·미정 표시는 당시 상태이며 현재 완료 여부로 사용하지 않는다.
