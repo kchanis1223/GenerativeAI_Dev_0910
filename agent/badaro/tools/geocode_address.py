@@ -157,8 +157,17 @@ def _parse_response(input_address: str, payload: dict[str, Any]) -> GeocodeResul
         return GeocodeResult(
             status=GeocodeStatus.NOT_FOUND, input_address=input_address, candidates=[]
         )
-    status = GeocodeStatus.OK if len(exact_candidates) == 1 else GeocodeStatus.AMBIGUOUS
-    return GeocodeResult(status=status, input_address=input_address, candidates=candidates)
+    if len(exact_candidates) == 1:
+        return GeocodeResult(
+            status=GeocodeStatus.OK,
+            input_address=input_address,
+            candidates=exact_candidates,
+        )
+    return GeocodeResult(
+        status=GeocodeStatus.AMBIGUOUS,
+        input_address=input_address,
+        candidates=candidates,
+    )
 
 
 def _raise_error(code: ToolErrorCode, message: str, retryable: bool) -> None:

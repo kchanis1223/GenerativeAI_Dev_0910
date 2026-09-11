@@ -154,6 +154,40 @@ def test_geocode_address_keeps_approximate_match_ambiguous(monkeypatch) -> None:
     assert result.status is GeocodeStatus.AMBIGUOUS
 
 
+def test_geocode_address_ok_keeps_only_exact_candidate(monkeypatch) -> None:
+    from importlib import import_module
+
+    geocode_module = import_module("badaro.tools.geocode_address")
+    geocode_module.clear_geocode_cache()
+    monkeypatch.setenv("TMAP_APP_KEY", "test-key")
+    monkeypatch.setattr(
+        geocode_module.httpx,
+        "get",
+        lambda *args, **kwargs: type(
+            "Response",
+            (),
+            {
+                "status_code": 200,
+                "json": lambda self: {
+                    "coordinateInfo": {
+                        "totalCount": "2",
+                        "coordinate": [
+                            {"newMatchFlag": "N51", "newLat": "37.5", "newLon": "126.9"},
+                            {"newMatchFlag": "N55", "newLat": "37.6", "newLon": "127.0"},
+                        ],
+                    }
+                },
+            },
+        )(),
+    )
+
+    result = geocode_module.geocode_address("서울시 중구 세종대로 1")
+
+    assert result.status is GeocodeStatus.OK
+    assert len(result.candidates) == 1
+    assert result.candidates[0].lat == 37.5
+
+
 @pytest.mark.parametrize(
     "payload",
     [{}, {"coordinateInfo": []}, {"coordinateInfo": {"coordinate": {}}}],
