@@ -15,13 +15,25 @@ def optimize_dispatch(
     order_ids: list[str],
     vehicle_ids: list[str],
     constraints: DispatchConstraints,
+) -> DispatchResult:
+    """배차 조건을 받아 TMAP/TMS 배차를 요청하는 LLM 공개 Tool 인터페이스.
+
+    주문·차량·좌표·출발지 정보는 LLM 입력으로 받지 않는다. Agent 실행 계층이
+    ``execute_optimize_dispatch``에 State/Context를 주입한다.
+    """
+    raise NotImplementedError
+
+
+def execute_optimize_dispatch(
+    order_ids: list[str],
+    vehicle_ids: list[str],
+    constraints: DispatchConstraints,
     runtime_context: DispatchRuntimeContext,
 ) -> DispatchResult:
-    """State에서 검증된 주문·차량·좌표를 조회해 TMAP/TMS 배차를 요청한다.
+    """서버가 Context를 주입해 실행하는 내부 배차 진입점.
 
-    ``runtime_context``는 LLM 입력이 아니라 Agent State에서 Tool 실행
-    계층이 주입한다. 조회 결과가 없거나 배송지 좌표가 확정되지 않으면
-    TMS를 호출하지 않고 ``ToolErrorException``을 발생시킨다.
+    ``runtime_context``는 LLM Tool 스키마에 포함되지 않는다. 조회 결과나
+    출발지 좌표가 없거나 확정되지 않으면 TMS를 호출하지 않는다.
     """
     _validate_runtime_context(order_ids, vehicle_ids, runtime_context)
     raise NotImplementedError
@@ -36,6 +48,18 @@ def _validate_runtime_context(
         _raise_context_error(
             ToolErrorCode.INVALID_INPUT,
             "배차에 사용할 주문과 차량이 필요합니다",
+        )
+
+    if not runtime_context.depot_id:
+        _raise_context_error(
+            ToolErrorCode.MISSING_CONTEXT,
+            "State에 출발지 센터 정보가 없습니다",
+        )
+
+    if runtime_context.origin is None:
+        _raise_context_error(
+            ToolErrorCode.MISSING_CONTEXT,
+            f"센터 출발지 좌표가 없습니다: {runtime_context.depot_id}",
         )
 
     missing_orders = [order_id for order_id in order_ids if order_id not in runtime_context.orders]

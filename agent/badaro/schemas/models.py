@@ -113,13 +113,16 @@ class GeocodeResult(BaseModel):
 
 
 class DispatchRuntimeContext(BaseModel):
-    """Tool 실행 계층이 조회 결과를 공유하기 위한 실행 컨텍스트.
+    """서버가 Tool 실행 계층에 주입하는 배차 실행 컨텍스트.
 
-    이 값은 LLM이 생성하지 않고 Agent State에서 주입한다. 지오코딩 결과는
-    destination_id를 키로 보관하여 배차 Tool이 임의로 주소나 좌표를 바꾸지
-    못하게 한다.
+    이 값은 LLM이 생성하거나 Tool 입력 스키마에 노출하지 않는다. ``depot_id``와
+    ``origin``은 센터 마스터에서 서버가 확정하고, 지오코딩 결과는
+    ``destination_id``를 키로 보관하여 배차 Tool이 임의로 주소나 좌표를
+    바꾸지 못하게 한다.
     """
 
+    depot_id: str | None = None
+    origin: GeocodeCandidate | None = None
     orders: dict[str, Order] = Field(default_factory=dict)
     vehicles: dict[str, Vehicle] = Field(default_factory=dict)
     geocodes: dict[str, GeocodeResult] = Field(default_factory=dict)
