@@ -12,6 +12,7 @@ TMS 결과와 최종 설명의 차량·방문 순서·시간·미배정 정보�
 from __future__ import annotations
 
 import re
+from datetime import datetime
 from typing import Any
 
 from ._compat import after_model, ai_message
@@ -42,11 +43,21 @@ def as_dict(obj: Any) -> dict[str, Any]:
 
 
 def _hhmm(value: Any) -> str | None:
-    """ISO 문자열·datetime·'HH:MM' 을 'HH:MM' 으로 통일한다. 해석 불가면 None."""
+    """ISO 문자열·datetime·'HH:MM' 을 'HH:MM' 으로 통일한다. 해석 불가면 None.
+
+    ISO 문자열을 정규식으로 훑으면 '2026-09-12T10:20:00' 에서 '20:00' 을 집는다.
+    날짜 파싱을 먼저 시도하고, 실패할 때만 시각 형식으로 해석한다.
+    """
     if value is None:
         return None
-    text = value.isoformat() if hasattr(value, "isoformat") else str(value)
-    m = CLOCK_RE.search(text)
+    if hasattr(value, "strftime"):
+        return value.strftime("%H:%M")
+    text = str(value).strip()
+    try:
+        return datetime.fromisoformat(text).strftime("%H:%M")
+    except ValueError:
+        pass
+    m = CLOCK_RE.fullmatch(text)
     return f"{int(m.group(1)):02d}:{m.group(2)}" if m else None
 
 

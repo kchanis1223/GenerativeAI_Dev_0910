@@ -438,8 +438,9 @@ def test_review_1_registered_names_are_callables_not_modules():
 def test_review_2_state_load_error_is_declared_and_terminates():
     """State 정의에 키가 없거나 종료 분기가 없으면 안내 뒤에도 모델이 호출된다."""
     import inspect
+    import sys
 
-    from badaro.middleware import dispatch_context as _hook
+    from badaro.middleware import dispatch_context as hook
     from badaro.middleware import state as state_mod
     from badaro.middleware.state import BadaroState
 
@@ -447,9 +448,10 @@ def test_review_2_state_load_error_is_declared_and_terminates():
     assert "state_load_error" in initial_state()
     assert inspect.getsource(state_mod).count("state_load_error") >= 2
 
-    import badaro.middleware.dispatch_context as dc_mod
+    # 패키지 네임스페이스의 dispatch_context 는 훅 객체라 모듈은 sys.modules 에서 가져온다.
+    dc_mod = sys.modules["badaro.middleware.dispatch_context"]
     assert 'can_jump_to=["end"]' in inspect.getsource(dc_mod)
-    assert _hook is not None
+    assert hook is not dc_mod
 
 
 def test_review_3_allow_list_matches_real_tool_signatures():
