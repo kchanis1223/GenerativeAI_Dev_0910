@@ -83,6 +83,20 @@ def test_geocode_result_enforces_status_candidate_contract() -> None:
             candidates=[],
         )
 
+    ambiguous = GeocodeResult(
+        status=GeocodeStatus.AMBIGUOUS,
+        input_address="서울시 중구 세종대로 1",
+        candidates=[candidate],
+    )
+    assert ambiguous.status is GeocodeStatus.AMBIGUOUS
+
+    with pytest.raises(ValidationError):
+        GeocodeResult(
+            status=GeocodeStatus.AMBIGUOUS,
+            input_address="서울시 중구 세종대로 1",
+            candidates=[],
+        )
+
 
 def test_vehicle_rejects_reversed_shift() -> None:
     with pytest.raises(ValidationError):
@@ -93,6 +107,18 @@ def test_vehicle_rejects_reversed_shift() -> None:
             available=True,
             shift_start=datetime(2026, 9, 11, 18),
             shift_end=datetime(2026, 9, 11, 5),
+        )
+
+
+def test_vehicle_rejects_mixed_timezone_shift_as_validation_error() -> None:
+    with pytest.raises(ValidationError, match="both include a timezone"):
+        Vehicle(
+            vehicle_id="VEHICLE-001",
+            capacity_weight_kg=1000,
+            supported_storage_types=[StorageType.REFRIGERATED],
+            available=True,
+            shift_start="2026-09-11T05:00:00+09:00",
+            shift_end="2026-09-11T18:00:00",
         )
 
 

@@ -1,0 +1,17 @@
+{
+  "branches": 20,
+  "centers": 1,
+  "orders": 40,
+  "vehicles": 5,
+  "weight_kg": 3125,
+  "geocoding_exact": 21,
+  "rejected": 4,
+  "Order": {
+    "raw_rejected": 40,
+    "mapped_passed": 40
+  },
+  "Vehicle": {
+    "raw_rejected": 5,
+    "mapped_passed": 5
+  }
+}
