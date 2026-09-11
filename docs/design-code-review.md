@@ -13,7 +13,7 @@
 | Context·State | RunContext·RunState, thread_id별 메모리 Session. 기존 BadaroContext·BadaroState를 확장. Store·권한·재배차는 미연결 |
 | 재시도 | 조회의 일시 오류만 최대 3회. TMS 정상 대기 응답은 기본 30회·1초 간격. HTTP별 timeout 10초. 배차 접수 자동 재전송 없음 |
 | 결과 검증 | 부적합 경로는 upstream_error로 종료. 경로에 없는 주문은 not_assigned. 구체적인 원인·ETA를 만들지 않음 |
-| 지도 | AgentReply.map_data → `src/domain/agent-map.ts` → DeliveryMap. 확정 좌표를 방문 순서대로 점선 연결 |
+| 지도 | AgentReply.map_data → `src/services/agent-map.ts` → DeliveryMap. 확정 좌표를 방문 순서대로 점선 연결 |
 | 모델·키 | gpt-5.4-mini 연결 확인. MAIN_MODEL로 설정. TMAP_APP_KEY와 TMS_APP_KEY는 서버에서 관리 |
 
 `runtime-contract.json`은 Tool 공개 인자, 등록 미들웨어, 모델 필드 목록이다. `python scripts/check_design.py`는 코드·이 목록·DOCX의 Tool/미들웨어/요청·결과 필드를 CI에서 대조한다. 내용이 바뀌면 설계서를 검토한 뒤 `--write`로 목록도 갱신한다. 설명·그림·검증 실적까지 자동 판정하는 검사는 아니다.
@@ -49,3 +49,11 @@
 ## 이번 대조의 검사 결과
 
 Python 187개, Vue 단위 53개, 브라우저 14개, Ruff·ESLint·빌드·설계 계약 대조를 통과했다. 브라우저의 별도 offline 서버 통합 1개는 제외했으며 Python의 실제 로컬 HTTP 테스트는 통과했다. 이번 대조에서는 외부 배차를 추가 실행하지 않았다. DOCX 21쪽을 렌더링해 검토했다.
+
+## 최종 제출 보완
+
+README에 새 환경의 설치·키 설정·CSV 날짜 생성·TMS 등록·Vue 실행 순서를 정리했다. `manual-tests.md`는 4.2 원문과 현재 날짜용 입력을 구분한다. 9월 11일~18일 주문 320건·차량 5대·센터·권역의 등록값 327건은 새 등록 도구로 재조회 대조했다. 이는 전체 주문의 실배차 성공을 뜻하지 않는다.
+
+등록 도구의 읽기 대조·기존 값 충돌·추가 후 재조회·재실행·통신 실패 검사를 포함해 Python 191개가 통과했다. 고정 날짜 Mock 서버의 실제 HTTP 연결로 날짜 재질문 후 주문 6건·차량 4대·미배정 0건을 확인했다. 실제 배차는 추가 호출하지 않았다.
+
+Vue 단위 53개·lint·빌드와 브라우저 15개도 통과했다. 브라우저 검사는 사용 중인 실제 서버를 유지하기 위해 임시 프록시의 별도 포트에서 수행했으며, 고정 날짜 Mock 서버로의 재질문·배차 결과 수신 1개를 포함한다. 최종 DOCX 21쪽을 렌더링해 확인했다.

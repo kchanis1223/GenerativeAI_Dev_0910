@@ -7,6 +7,7 @@
 | 문서 | 내용 |
 | --- | --- |
 | [v2 설계와 코드 대조](design-code-review.md) | 실제 연결 위치, 4.2의 8개 테스트 대응, 검사 결과, 남은 확인 |
+| [실제 API 수동 테스트](manual-tests.md) | 설계서 4.2의 질문·판정 기준·별도 재현 조건 |
 | [Agent 실행 안내](agent-integration.md) | offline·LLM Mock·실제 API 실행, 서버 설정, Vue 연결과 시연 기록 |
 | [프론트 가이드](frontend.md) / [화면 설계](design.md) | Agent 채팅·점선 지도와 별도 프론트 목업 |
 | [TMS API 목업](tms-api.md) | 24개 프론트 목업 API의 필드와 계산 범위 |
